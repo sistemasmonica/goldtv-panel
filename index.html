@@ -171,6 +171,7 @@ select option{background:#1a1735}
   <button class="nt" onclick="tab('nuevo',this)">➕ Nuevo cliente</button>
   <button class="nt" onclick="tab('vencimientos',this)">⏰ Vencimientos</button>
   <button class="nt" onclick="tab('guias',this)">📖 Guías instalación</button>
+  <button class="nt" onclick="tab('renovaciones',this)">📋 Renovaciones</button>
   <button class="nt" onclick="tab('ayuda',this)">❓ Ayuda</button>
 </div>
 
@@ -448,6 +449,49 @@ select option{background:#1a1735}
 </div>
 </div>
 
+<!-- ===== RENOVACIONES ===== -->
+<div id="pn-renovaciones" class="pn">
+  <div class="sc-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px">
+    <div class="sc"><div class="sc-lbl">Este mes</div><div class="sc-val" style="color:var(--gold)" id="rn-mes">0</div><div class="sc-sub">renovaciones</div></div>
+    <div class="sc"><div class="sc-lbl">Cobrado este mes</div><div class="sc-val" style="color:var(--green)" id="rn-mes-total">$0.00</div><div class="sc-sub">en renovaciones</div></div>
+    <div class="sc"><div class="sc-lbl">Total histórico</div><div class="sc-val" style="color:#a78bfa" id="rn-total">$0.00</div><div class="sc-sub">cobrado total</div></div>
+  </div>
+  <div class="card">
+    <div class="card-inner">
+      <div class="card-t">📋 Historial de renovaciones</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <select id="rn-mes-fil" onchange="renderRenovaciones()" style="width:auto;padding:6px 10px;font-size:12px">
+          <option value="">Todos los meses</option>
+        </select>
+        <input type="search" id="rn-q" placeholder="Buscar cliente..." onInput="renderRenovaciones()" style="flex:1;min-width:150px;padding:6px 10px;font-size:12px">
+      </div>
+      <div class="tbl-wrap">
+        <table><thead><tr>
+          <th>Fecha</th><th>Cliente</th><th>Tipo</th><th>Meses</th><th>Precio</th><th>Vence hasta</th>
+        </tr></thead>
+        <tbody id="tb-renovaciones"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL HISTORIAL CLIENTE -->
+<div class="modal-overlay" id="modal-hist">
+  <div class="modal">
+    <div class="modal-t">
+      <span id="hist-titulo">Historial</span>
+      <button class="btn btn-s btn-sm" onclick="cerrarModal('modal-hist')">✕</button>
+    </div>
+    <div class="tbl-wrap" style="max-height:300px;overflow-y:auto">
+      <table><thead><tr>
+        <th>Fecha</th><th>Meses</th><th>Precio</th><th>Nuevo vence</th>
+      </tr></thead>
+      <tbody id="hist-body"></tbody></table>
+    </div>
+    <div style="margin-top:12px;text-align:right;font-size:13px;color:var(--gold)">Total cobrado: <b id="hist-total">$0.00</b></div>
+  </div>
+</div>
+
 <!-- MODAL RENOVAR -->
 <div class="modal-overlay" id="modal-renovar">
   <div class="modal">
@@ -611,6 +655,62 @@ function tab(id,el){
   if(id==='nuevo'){limpiarFormCliente();const fi=document.getElementById('cli-inicio');if(fi&&!fi.value)fi.value=today();calcVence();}
   if(id==='vencimientos')renderVencimientos();
   if(id==='guias')llenarSelectClientes();
+  if(id==='renovaciones')renderRenovaciones();
+}
+
+function verHistorial(id){
+  const c=DB.clientes.find(x=>x.id===id);if(!c)return;
+  const hist=c.historial||[];
+  const total=hist.reduce((s,h)=>s+(h.precio||0),0);
+  document.getElementById('hist-titulo').textContent='📋 '+c.nombre+' — Historial';
+  document.getElementById('hist-body').innerHTML=!hist.length
+    ?`<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px">Sin renovaciones registradas aún</td></tr>`
+    :hist.slice().reverse().map(h=>`<tr>
+      <td>${h.fecha}</td>
+      <td>${h.meses} mes${h.meses>1?'es':''}</td>
+      <td style="font-family:monospace;color:var(--green)">${fmt(h.precio)}</td>
+      <td style="font-family:monospace">${h.nueva_fecha||'—'}</td>
+    </tr>`).join('');
+  document.getElementById('hist-total').textContent=fmt(total);
+  abrirModal('modal-hist');
+}
+
+function renderRenovaciones(){
+  const mesActual=new Date().toISOString().substr(0,7);
+  const todas=[];
+  DB.clientes.forEach(c=>{
+    (c.historial||[]).forEach(h=>{
+      todas.push({...h,nombre:c.nombre,tipo:c.tipo||'mensual'});
+    });
+  });
+  todas.sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  const esMes=todas.filter(h=>h.fecha.startsWith(mesActual));
+  const s=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  s('rn-mes',esMes.length);
+  s('rn-mes-total',fmt(esMes.reduce((t,h)=>t+(h.precio||0),0)));
+  s('rn-total',fmt(todas.reduce((t,h)=>t+(h.precio||0),0)));
+  const meses=[...new Set(todas.map(h=>h.fecha.substr(0,7)))].sort().reverse();
+  const sel=document.getElementById('rn-mes-fil');
+  if(sel){
+    const cur=sel.value;
+    sel.innerHTML='<option value="">Todos los meses</option>'+meses.map(m=>`<option value="${m}"${m===cur?' selected':''}>${m}</option>`).join('');
+  }
+  const mesFil=sel?.value||'';
+  const q=(document.getElementById('rn-q')?.value||'').toLowerCase();
+  let lista=todas;
+  if(mesFil)lista=lista.filter(h=>h.fecha.startsWith(mesFil));
+  if(q)lista=lista.filter(h=>h.nombre.toLowerCase().includes(q));
+  const tb=document.getElementById('tb-renovaciones');
+  if(!tb)return;
+  if(!lista.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">Sin renovaciones registradas aún</td></tr>';return;}
+  tb.innerHTML=lista.map(h=>`<tr>
+    <td>${h.fecha}</td>
+    <td><b>${escH(h.nombre)}</b></td>
+    <td>${TIPO_BADGE[h.tipo]||h.tipo}</td>
+    <td style="text-align:center">${h.meses}</td>
+    <td style="font-family:monospace;color:var(--green)">${fmt(h.precio)}</td>
+    <td style="font-family:monospace">${h.nueva_fecha||'—'}</td>
+  </tr>`).join('');
 }
 
 // ===== FORMULARIO =====
@@ -718,9 +818,12 @@ function guardarRenovacion(){
   const plan=document.getElementById('ren-plan').value;
   const precio=parseFloat(document.getElementById('ren-precio').value)||0;
   const c=DB.clientes.find(x=>x.id===id);if(!c)return;
+  const fechaAnterior=c.vencimiento;
   const baseDate=diasHasta(c.vencimiento)<0?today():c.vencimiento;
   c.vencimiento=addMeses(baseDate,plan);
   c.plan=plan;c.precio=precio;
+  if(!c.historial)c.historial=[];
+  c.historial.push({fecha:today(),fecha_anterior:fechaAnterior,meses:parseInt(plan),precio:precio,nueva_fecha:c.vencimiento});
   save();cerrarModal('modal-renovar');renderAll();
   alert('✅ Suscripción renovada hasta: '+c.vencimiento);
 }
@@ -863,7 +966,8 @@ function renderClientes(){
         <div style="display:flex;gap:3px;flex-wrap:wrap">
           <button class="btn btn-wa btn-sm" onclick="enviarWACredenciales('${c.id}')" title="Credenciales WA">🔑</button>
           <button class="btn btn-wa btn-sm" onclick="enviarWAInstalacion('${c.id}')" title="Guía instalación">📖</button>
-          <button class="btn btn-g btn-sm" onclick="abrirRenovar('${c.id}')" title="Renovar">🔄</button>
+          <button class="btn btn-g btn-sm" onclick="abrirRenovar('${c.id}')" title="Actualizar fecha">📅</button>
+          <button class="btn btn-s btn-sm" onclick="verHistorial('${c.id}')" title="Ver historial">📋</button>
           <button class="btn btn-s btn-sm" onclick="editarCliente('${c.id}')" title="Editar">✏️</button>
           <button class="btn btn-d btn-sm" onclick="eliminarCliente('${c.id}')" title="Eliminar">🗑️</button>
         </div>
