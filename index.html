@@ -378,12 +378,12 @@ select option{background:#1a1735}
 
 <!-- RENOVAR -->
 <div class="ay-sec">
-  <div class="ay-sec-t"><span>2️⃣</span> Cómo renovar un cliente</div>
+  <div class="ay-sec-t"><span>2️⃣</span> Cómo actualizar la fecha de un cliente</div>
   <div class="ay-paso"><div class="ay-n">1</div><div>Ve a <b>👥 Clientes</b> y busca al cliente que va a renovar</div></div>
-  <div class="ay-paso"><div class="ay-n">2</div><div>Haz clic en el botón <b>🔄 Renovar</b> al lado del cliente</div></div>
+  <div class="ay-paso"><div class="ay-n">2</div><div>Haz clic en el botón <b>📅 Actualizar fecha</b> al lado del cliente</div></div>
   <div class="ay-paso"><div class="ay-n">3</div><div>Elige cuántos meses renueva y el precio cobrado, luego <b>Confirmar renovación</b></div></div>
   <div class="ay-paso"><div class="ay-n">4</div><div>La fecha de vencimiento se actualiza automáticamente</div></div>
-  <div class="ay-tip">💡 Recuerda renovar también en el panel OTT — este sistema lleva el control de tus clientes pero no modifica el OTT directamente.</div>
+  <div class="ay-warn">⚠️ <b>Importante:</b> Primero renueva en el panel OTT para que el cliente tenga servicio. Luego actualiza la fecha aquí para llevar tu control personal.</div>
 </div>
 
 <!-- VENCIMIENTOS -->
@@ -419,7 +419,7 @@ select option{background:#1a1735}
   <table class="ay-tabla">
     <tr><th>Botón</th><th>Para qué sirve</th></tr>
     <tr><td>✏️ Editar</td><td>Cambiar datos del cliente</td></tr>
-    <tr><td>🔄 Renovar</td><td>Extender la fecha de vencimiento</td></tr>
+    <tr><td>📅 Actualizar fecha</td><td>Actualizar la fecha en tu registro (renueva primero en OTT)</td></tr>
     <tr><td>📲 WhatsApp</td><td>Enviar datos del cliente por WhatsApp</td></tr>
     <tr><td>🗑️ Eliminar</td><td>Borrar un cliente de la lista</td></tr>
     <tr><td>☁️ Backup</td><td>Descargar respaldo de todos los clientes</td></tr>
@@ -446,9 +446,10 @@ select option{background:#1a1735}
 <div class="modal-overlay" id="modal-renovar">
   <div class="modal">
     <div class="modal-t">
-      <span>🔄 Renovar suscripción</span>
+      <span>📅 Actualizar fecha de vencimiento</span>
       <button class="btn btn-s btn-sm" onclick="cerrarModal('modal-renovar')">✕</button>
     </div>
+    <div style="background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.3);border-radius:8px;padding:9px 12px;font-size:11px;color:#fdba74;margin-bottom:10px">⚠️ Esto solo actualiza tu registro personal. Recuerda renovar también en el panel OTT para que el cliente siga con servicio.</div>
     <div id="modal-ren-info" style="margin-bottom:14px;padding:10px;background:var(--surface2);border-radius:8px;font-size:12px"></div>
     <div class="f2">
       <div class="fg"><label>Meses a renovar</label>
@@ -797,14 +798,14 @@ function renderDash(){
     <div><b>${escH(c.nombre)}</b> <span style="color:var(--muted);font-size:11px">${DISP_LABEL[c.device]||c.device}</span></div>
     <div style="display:flex;gap:6px;align-items:center">
       <span style="color:var(--orange);font-size:11px">Vence en ${diasHasta(c.vencimiento)} día(s)</span>
-      <button class="btn btn-g btn-sm" onclick="abrirRenovar('${c.id}')">🔄 Renovar</button>
+      <button class="btn btn-g btn-sm" onclick="abrirRenovar('${c.id}')">📅 Actualizar fecha</button>
       <button class="btn btn-wa btn-sm" onclick="enviarWACredenciales('${c.id}')">📲 WA</button>
     </div>
   </div>`).join(''):'<div class="empty">Sin vencimientos en los próximos 7 días</div>';
   const vencList=DB.clientes.filter(c=>estadoCliente(c)==='vencido').sort((a,b)=>b.vencimiento.localeCompare(a.vencimiento));
   document.getElementById('d-vencidos-lista').innerHTML=vencList.length?vencList.map(c=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:6px">
     <div><b>${escH(c.nombre)}</b> <span style="color:var(--red);font-size:11px">venció hace ${Math.abs(diasHasta(c.vencimiento))} día(s)</span></div>
-    <button class="btn btn-g btn-sm" onclick="abrirRenovar('${c.id}')">🔄 Renovar</button>
+    <button class="btn btn-g btn-sm" onclick="abrirRenovar('${c.id}')">📅 Actualizar fecha</button>
   </div>`).join(''):'<div class="empty">Sin clientes vencidos</div>';
 }
 
@@ -861,7 +862,7 @@ function renderVencimientos(){
     <div style="font-size:11px;color:var(--muted);font-family:monospace">${c.user}</div></div>
     <div style="display:flex;gap:6px;flex-wrap:wrap">
       <span style="color:${diasHasta(c.vencimiento)<=7?'var(--orange)':'var(--gold)'};font-size:12px;font-weight:600">Vence: ${c.vencimiento} (${diasHasta(c.vencimiento)} días)</span>
-      <button class="btn btn-g btn-sm" onclick="abrirRenovar('${c.id}')">🔄 Renovar</button>
+      <button class="btn btn-g btn-sm" onclick="abrirRenovar('${c.id}')">📅 Actualizar fecha</button>
       <button class="btn btn-wa btn-sm" onclick="enviarWACredenciales('${c.id}')">📲 WA</button>
     </div>
   </div>`).join(''):'<div class="empty">Sin vencimientos próximos</div>';
@@ -869,7 +870,7 @@ function renderVencimientos(){
   document.getElementById('v-lista-vencidos').innerHTML=vencidos.length?vencidos.map(c=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px">
     <div><b>${escH(c.nombre)}</b>
     <div style="font-size:11px;color:var(--red)">Venció el ${c.vencimiento} (hace ${Math.abs(diasHasta(c.vencimiento))} días)</div></div>
-    <button class="btn btn-g btn-sm" onclick="abrirRenovar('${c.id}')">🔄 Renovar</button>
+    <button class="btn btn-g btn-sm" onclick="abrirRenovar('${c.id}')">📅 Actualizar fecha</button>
   </div>`).join(''):'<div class="empty">Sin clientes vencidos</div>';
 }
 
