@@ -171,6 +171,7 @@ select option{background:#1a1735}
   <button class="nt" onclick="tab('nuevo',this)">➕ Nuevo cliente</button>
   <button class="nt" onclick="tab('vencimientos',this)">⏰ Vencimientos</button>
   <button class="nt" onclick="tab('guias',this)">📖 Guías instalación</button>
+  <button class="nt" onclick="tab('ayuda',this)">❓ Ayuda</button>
 </div>
 
 <!-- ===== INICIO ===== -->
@@ -346,6 +347,99 @@ select option{background:#1a1735}
       </div>
     </div>
   </div>
+</div>
+
+<!-- ===== AYUDA ===== -->
+<div id="pn-ayuda" class="pn">
+<style>
+.ay-sec{margin-bottom:18px}
+.ay-sec-t{font-size:13px;font-weight:700;color:var(--gold);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.ay-paso{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:var(--surface2);border-radius:9px;margin-bottom:7px;font-size:12px;color:#ccc;line-height:1.6}
+.ay-n{background:linear-gradient(135deg,var(--nb),var(--np));color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px}
+.ay-tip{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);border-radius:9px;padding:10px 13px;font-size:12px;color:#86efac;margin:8px 0;line-height:1.6}
+.ay-warn{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:9px;padding:10px 13px;font-size:12px;color:#fca5a5;margin:8px 0;line-height:1.6}
+.ay-tabla{width:100%;border-collapse:collapse;font-size:11px;margin-top:6px}
+.ay-tabla th{background:var(--surface2);padding:7px 10px;text-align:left;color:#9090cc;font-size:10px;text-transform:uppercase;letter-spacing:.4px}
+.ay-tabla td{padding:7px 10px;border-top:1px solid rgba(100,100,200,.15);color:#ccc;vertical-align:top}
+</style>
+<div class="card">
+<div class="card-inner">
+<div class="card-t">❓ Guía de uso del Panel GOLDTV</div>
+
+<!-- AGREGAR CLIENTE -->
+<div class="ay-sec">
+  <div class="ay-sec-t"><span>1️⃣</span> Cómo agregar un cliente nuevo</div>
+  <div class="ay-paso"><div class="ay-n">1</div><div>Ve a la pestaña <b>➕ Nuevo cliente</b> en el menú de arriba</div></div>
+  <div class="ay-paso"><div class="ay-n">2</div><div>Llena los datos: <b>Nombre</b> del cliente, <b>Teléfono</b> (con 0 al inicio), <b>Usuario</b> y <b>Contraseña</b> IPTV que le diste en el OTT panel</div></div>
+  <div class="ay-paso"><div class="ay-n">3</div><div>Elige el <b>Tipo</b> (Mensual, Trial/Prueba o Anual) y la <b>fecha de vencimiento</b></div></div>
+  <div class="ay-paso"><div class="ay-n">4</div><div>Haz clic en <b>Guardar cliente</b> — se guarda en la nube automáticamente</div></div>
+  <div class="ay-tip">✅ Los datos se guardan en la nube. Puedes cerrar el celular y cuando vuelvas a abrir el link siguen ahí.</div>
+</div>
+
+<!-- RENOVAR -->
+<div class="ay-sec">
+  <div class="ay-sec-t"><span>2️⃣</span> Cómo renovar un cliente</div>
+  <div class="ay-paso"><div class="ay-n">1</div><div>Ve a <b>👥 Clientes</b> y busca al cliente que va a renovar</div></div>
+  <div class="ay-paso"><div class="ay-n">2</div><div>Haz clic en el botón <b>🔄 Renovar</b> al lado del cliente</div></div>
+  <div class="ay-paso"><div class="ay-n">3</div><div>Elige cuántos meses renueva y el precio cobrado, luego <b>Confirmar renovación</b></div></div>
+  <div class="ay-paso"><div class="ay-n">4</div><div>La fecha de vencimiento se actualiza automáticamente</div></div>
+  <div class="ay-tip">💡 Recuerda renovar también en el panel OTT — este sistema lleva el control de tus clientes pero no modifica el OTT directamente.</div>
+</div>
+
+<!-- VENCIMIENTOS -->
+<div class="ay-sec">
+  <div class="ay-sec-t"><span>3️⃣</span> Cómo ver quién vence pronto</div>
+  <div class="ay-paso"><div class="ay-n">1</div><div>Ve a la pestaña <b>⏰ Vencimientos</b></div></div>
+  <div class="ay-paso"><div class="ay-n">2</div><div>Verás dos secciones: <b>Próximos a vencer</b> (7 días) y <b>Clientes vencidos</b></div></div>
+  <div class="ay-paso"><div class="ay-n">3</div><div>Usa el botón <b>WhatsApp</b> para avisar al cliente directamente con un mensaje listo</div></div>
+  <div class="ay-tip">📅 El Inicio también muestra un resumen de quién vence pronto para que lo veas de un vistazo.</div>
+</div>
+
+<!-- WHATSAPP -->
+<div class="ay-sec">
+  <div class="ay-sec-t"><span>4️⃣</span> Cómo enviar datos por WhatsApp</div>
+  <div class="ay-paso"><div class="ay-n">1</div><div>En la lista de <b>Clientes</b>, haz clic en el botón 📲 del cliente</div></div>
+  <div class="ay-paso"><div class="ay-n">2</div><div>Se abre WhatsApp con un mensaje listo con el usuario, contraseña y datos del cliente</div></div>
+  <div class="ay-paso"><div class="ay-n">3</div><div>Para guías de instalación por dispositivo, ve a <b>📖 Guías instalación</b></div></div>
+</div>
+
+<!-- BACKUP -->
+<div class="ay-sec">
+  <div class="ay-sec-t"><span>5️⃣</span> Cómo hacer backup (respaldo)</div>
+  <div class="ay-paso"><div class="ay-n">1</div><div>En la parte superior haz clic en <b>☁️ Backup</b></div></div>
+  <div class="ay-paso"><div class="ay-n">2</div><div>Se descarga un archivo JSON con todos tus clientes — guárdalo en tu celular o Drive</div></div>
+  <div class="ay-paso"><div class="ay-n">3</div><div>Para restaurar, haz clic en <b>📥 Restaurar</b> y selecciona ese archivo</div></div>
+  <div class="ay-warn">⚠️ Se recomienda hacer backup una vez por mes como respaldo extra, aunque los datos ya están seguros en la nube.</div>
+</div>
+
+<!-- TABLA RESUMEN -->
+<div class="ay-sec">
+  <div class="ay-sec-t"><span>📋</span> Resumen rápido de botones</div>
+  <div class="tbl-wrap" style="margin-bottom:0">
+  <table class="ay-tabla">
+    <tr><th>Botón</th><th>Para qué sirve</th></tr>
+    <tr><td>✏️ Editar</td><td>Cambiar datos del cliente</td></tr>
+    <tr><td>🔄 Renovar</td><td>Extender la fecha de vencimiento</td></tr>
+    <tr><td>📲 WhatsApp</td><td>Enviar datos del cliente por WhatsApp</td></tr>
+    <tr><td>🗑️ Eliminar</td><td>Borrar un cliente de la lista</td></tr>
+    <tr><td>☁️ Backup</td><td>Descargar respaldo de todos los clientes</td></tr>
+    <tr><td>📥 Restaurar</td><td>Subir un respaldo guardado</td></tr>
+  </table>
+  </div>
+</div>
+
+<!-- FAQ -->
+<div class="ay-sec">
+  <div class="ay-sec-t"><span>❓</span> Preguntas frecuentes</div>
+  <div class="ay-paso"><div class="ay-n">?</div><div><b>¿Se borran mis clientes si cierro el celular?</b><br>No. Todo está guardado en la nube. Cierra y abre cuando quieras.</div></div>
+  <div class="ay-paso"><div class="ay-n">?</div><div><b>¿Puedo usar el panel en varios celulares?</b><br>Sí. El mismo link funciona en cualquier celular, tablet o computadora y siempre muestra lo mismo.</div></div>
+  <div class="ay-paso"><div class="ay-n">?</div><div><b>¿Otros vendedores pueden ver mis clientes?</b><br>No. Cada vendedor solo ve sus propios clientes. Los datos están separados por cuenta.</div></div>
+  <div class="ay-paso"><div class="ay-n">?</div><div><b>¿Este sistema crea los usuarios en el OTT?</b><br>No. El OTT lo manejas tú por separado. Este panel es para llevar el control de tus clientes y fechas.</div></div>
+  <div class="ay-paso"><div class="ay-n">?</div><div><b>¿Qué hago si no puedo entrar?</b><br>Contacta a tu proveedor GOLDTV por WhatsApp al <b>0997594528</b>.</div></div>
+</div>
+
+</div>
+</div>
 </div>
 
 <!-- MODAL RENOVAR -->
