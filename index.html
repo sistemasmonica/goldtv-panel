@@ -141,6 +141,12 @@ select option{background:#1a1735}
   <div style="color:var(--muted);font-size:10px;margin-top:16px">Powered by GOLD TV Monica · Sistema exclusivo para revendedores autorizados</div>
 </div>
 
+<!-- DEMO BANNER (visible solo en modo demo) -->
+<div id="demo-banner" style="display:none;background:linear-gradient(90deg,#6b3fa0,#4c1d95);padding:10px 20px;text-align:center;font-size:12px;color:#fff;font-weight:700;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap">
+  🎁 MODO DEMO ACTIVO — Puedes explorar el sistema. Límite: 3 clientes de prueba. —
+  <a href="https://wa.me/593997594528" target="_blank" style="color:#fde68a;text-decoration:none">📲 Contacta para activar tu licencia completa →</a>
+</div>
+
 <!-- APP PRINCIPAL -->
 <div id="app">
 <div class="w">
@@ -629,6 +635,7 @@ const DOWNLOADER_CODE='1566382';
 const DOWNLOADER_LINK='http://aftv.news/1566382';
 
 let DB={clientes:[]};
+let IS_DEMO=false;
 
 const DISP_LABEL={'android-tv':'📺 Android TV','celular':'📱 Celular Android','smart-tv':'🖥️ Smart TV','iphone':'🍎 iPhone/iPad','tv-box':'📦 TV Box','fire-tv':'🔥 Fire TV','pc':'💻 PC'};
 const TIPO_BADGE={'mensual':'<span class="bdg" style="background:#1565c0">💳 Mensual</span>','trial':'<span class="bdg" style="background:#6b3fa0">🆓 Trial</span>','anual':'<span class="bdg" style="background:#b8860b">⭐ Anual</span>'};
@@ -637,9 +644,14 @@ const TIPO_BADGE={'mensual':'<span class="bdg" style="background:#1565c0">💳 M
 async function checkLicense(){
   if(!VENDOR_ID||!LICENSE_KEY){showLock();return false;}
   try{
-    const{data,error}=await sb.from('gtv_licencias').select('active,vendor_name').eq('vendor_id',VENDOR_ID).eq('license_key',LICENSE_KEY).maybeSingle();
+    const{data,error}=await sb.from('gtv_licencias').select('active,vendor_name,demo').eq('vendor_id',VENDOR_ID).eq('license_key',LICENSE_KEY).maybeSingle();
     if(error||!data||!data.active){showLock();return false;}
     document.getElementById('vendor-label').textContent='👤 '+data.vendor_name;
+    if(data.demo){
+      IS_DEMO=true;
+      const banner=document.getElementById('demo-banner');
+      if(banner)banner.style.display='flex';
+    }
     return true;
   }catch(e){showLock();return false;}
 }
@@ -825,6 +837,7 @@ function guardarCliente(){
   const notas=(document.getElementById('cli-notas').value||'').trim();
   const debe=parseFloat(document.getElementById('cli-debe')?.value)||0;
   const editId=document.getElementById('cli-edit-id').value||'';
+  if(IS_DEMO&&!editId&&DB.clientes.length>=3){alert('🎁 MODO DEMO: Límite de 3 clientes de prueba alcanzado.\n\nContacta a tu proveedor para activar tu licencia completa y gestionar todos tus clientes.');return;}
   if(!nombre)return alert('Ingresa el nombre del cliente');
   if(!user||!pass)return alert('Ingresa el usuario y contraseña del panel OTT');
   const vencimiento=addMeses(inicio,plan);
