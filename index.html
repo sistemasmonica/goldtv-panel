@@ -905,18 +905,9 @@ async function cargarSubvendedores(){
       <td style="font-size:11px">${venceTxt}</td>
       <td>
         <button class="btn btn-s btn-sm" onclick="navigator.clipboard.writeText('${link}');this.textContent='✓ Copiado'">📋 Copiar link</button>
-        <button class="btn btn-s btn-sm" onclick="renovarSubvendedor('${escH(v.vendor_id)}')">🔄 Renovar 1 año</button>
       </td>
     </tr>`;
   }).join('');
-}
-
-async function renovarSubvendedor(vendorId){
-  if(!confirm('¿Renovar el acceso de este sub-vendedor por 1 año más?'))return;
-  const vence=addDias(today(),365);
-  const{error}=await sb.from('gtv_licencias').update({vence,active:true}).eq('vendor_id',vendorId);
-  if(error){alert('Error: '+error.message);return;}
-  cargarSubvendedores();
 }
 
 // ===== UTILIDADES =====
