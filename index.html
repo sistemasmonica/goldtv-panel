@@ -215,6 +215,7 @@ select option{background:#1a1735}
     <h2>Todos los clientes</h2>
     <div style="display:flex;gap:8px">
       <button class="btn btn-gold btn-sm" onclick="tab('nuevo',document.querySelectorAll('.nav>.nt')[2])">➕ Nuevo cliente</button>
+      <button class="btn btn-sm" style="background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.5);color:#c084fc" onclick="abrirSincronizar()">🔄 Sincronizar desde OTT</button>
       <button class="btn btn-s btn-sm" onclick="exportarCSV()">⬇️ Exportar</button>
     </div>
   </div>
@@ -422,9 +423,21 @@ select option{background:#1a1735}
   💡 <b>En resumen:</b> el OTT activa el servicio, esta guía te ayuda a administrar tu negocio de forma profesional. Los dos se usan juntos.
 </div>
 
+<!-- SINCRONIZAR OTT -->
+<div class="ay-sec">
+  <div class="ay-sec-t"><span>🔄</span> Cargar todos tus clientes de una vez (recomendado si ya tienes varios)</div>
+  <div class="ay-paso"><div class="ay-n">1</div><div>Entra a tu <b>Panel OTT</b> → <b>Users</b> → <b>Administrar Usuarios</b></div></div>
+  <div class="ay-paso"><div class="ay-n">2</div><div>Haz clic en <b>Backup Users</b> (arriba a la derecha) y elige <b>JSON</b> — se descarga un archivo a tu celular/PC</div></div>
+  <div class="ay-paso"><div class="ay-n">3</div><div>Ve a la pestaña <b>👥 Clientes</b> de este panel y haz clic en <b>🔄 Sincronizar desde OTT</b></div></div>
+  <div class="ay-paso"><div class="ay-n">4</div><div>Haz clic en <b>📂 Seleccionar archivo JSON</b> y elige el archivo que acabas de descargar</div></div>
+  <div class="ay-paso"><div class="ay-n">5</div><div>Revisa la lista, desmarca los que no quieras y haz clic en <b>⬇️ Importar todos</b></div></div>
+  <div class="ay-tip">✅ Esto trae usuario, contraseña y fecha de vencimiento automáticamente. Después puedes editar cada cliente (✏️) para agregarle nombre y teléfono.</div>
+  <div class="ay-warn">⚠️ Esta sincronización solo trae los datos técnicos (usuario/clave/fecha). No hay conexión automática permanente — cada vez que actives clientes nuevos en el OTT, repite estos pasos para traerlos aquí.</div>
+</div>
+
 <!-- AGREGAR CLIENTE -->
 <div class="ay-sec">
-  <div class="ay-sec-t"><span>1️⃣</span> Cómo agregar un cliente nuevo</div>
+  <div class="ay-sec-t"><span>1️⃣</span> Cómo agregar un cliente nuevo (uno por uno)</div>
   <div class="ay-paso"><div class="ay-n">1</div><div>Ve a la pestaña <b>➕ Nuevo cliente</b> en el menú de arriba</div></div>
   <div class="ay-paso"><div class="ay-n">2</div><div>Llena los datos: <b>Nombre</b> del cliente, <b>Teléfono</b> (con 0 al inicio), <b>Usuario</b> y <b>Contraseña</b> IPTV que le diste en el OTT panel</div></div>
   <div class="ay-paso"><div class="ay-n">3</div><div>Elige el <b>Tipo</b> (Mensual, Trial/Prueba o Anual) y la <b>fecha de vencimiento</b></div></div>
@@ -599,6 +612,47 @@ select option{background:#1a1735}
       <button class="btn btn-gold" onclick="copiarReporte()">📋 Copiar reporte</button>
       <button class="btn btn-s" onclick="cerrarModal('modal-reporte')">Cerrar</button>
     </div>
+  </div>
+</div>
+
+<!-- MODAL SINCRONIZAR -->
+<div class="modal-overlay" id="modal-sync">
+  <div class="modal" style="width:min(750px,95vw)">
+    <div class="modal-t">
+      <span>🔄 Sincronizar desde Panel OTT</span>
+      <button class="btn btn-s btn-sm" onclick="cerrarModal('modal-sync')">✕</button>
+    </div>
+    <div id="sync-estado" style="background:var(--surface2);border:1px solid rgba(74,108,247,.4);border-radius:8px;padding:14px;margin-bottom:12px;font-size:12px;color:var(--muted)">
+      En tu Panel OTT ve a <b style="color:var(--gold)">Users → Administrar Usuarios → Backup Users → JSON</b> para descargar el archivo. Luego haz clic en <b style="color:var(--gold)">"📂 Seleccionar archivo JSON"</b> y elígelo aquí.
+    </div>
+    <div id="sync-lista" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+        <span id="sync-count" style="font-size:12px;color:var(--gold);font-weight:700"></span>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-sm" style="background:rgba(74,108,247,.2);border:1px solid rgba(74,108,247,.5);color:#7c8fff" onclick="syncSelAll(true)">Seleccionar todos</button>
+          <button class="btn btn-sm btn-s" onclick="syncSelAll(false)">Deseleccionar</button>
+        </div>
+      </div>
+      <div style="max-height:320px;overflow-y:auto;border:1px solid rgba(74,108,247,.3);border-radius:8px">
+        <table style="width:100%;border-collapse:collapse;font-size:11px">
+          <thead><tr style="background:var(--surface2)">
+            <th style="padding:7px 10px;text-align:left;color:var(--muted);font-weight:700;font-size:10px;text-transform:uppercase;border-bottom:1px solid rgba(74,108,247,.3)"><input type="checkbox" id="chk-all" onchange="syncSelAll(this.checked)"></th>
+            <th style="padding:7px 10px;text-align:left;color:var(--muted);font-weight:700;font-size:10px;text-transform:uppercase;border-bottom:1px solid rgba(74,108,247,.3)">Usuario</th>
+            <th style="padding:7px 10px;text-align:left;color:var(--muted);font-weight:700;font-size:10px;text-transform:uppercase;border-bottom:1px solid rgba(74,108,247,.3)">Contraseña</th>
+            <th style="padding:7px 10px;text-align:left;color:var(--muted);font-weight:700;font-size:10px;text-transform:uppercase;border-bottom:1px solid rgba(74,108,247,.3)">Vencimiento</th>
+            <th style="padding:7px 10px;text-align:left;color:var(--muted);font-weight:700;font-size:10px;text-transform:uppercase;border-bottom:1px solid rgba(74,108,247,.3)">Estado</th>
+            <th style="padding:7px 10px;text-align:left;color:var(--muted);font-weight:700;font-size:10px;text-transform:uppercase;border-bottom:1px solid rgba(74,108,247,.3)">Ya existe</th>
+          </tr></thead>
+          <tbody id="tb-sync"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn btn-gold" onclick="triggerFileImport()" style="font-size:13px;padding:10px 20px">📂 Seleccionar archivo JSON</button>
+      <button class="btn" id="btn-importar" onclick="importarSeleccionados()" style="display:none;background:linear-gradient(135deg,#7c3aed,#c026d3);color:#fff">⬇️ Importar todos</button>
+      <button class="btn btn-s" onclick="cerrarModal('modal-sync')">✕ Cerrar</button>
+    </div>
+    <input type="file" id="file-import-input" accept=".json,.csv,.txt" style="display:none" onchange="importarArchivo(this)">
   </div>
 </div>
 
@@ -1106,6 +1160,155 @@ function exportarCSV(){
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'}));
   a.download='clientes_'+today()+'.csv';a.click();
+}
+
+// ===== SINCRONIZAR PANEL OTT =====
+let syncData=[];
+
+function abrirSincronizar(){
+  syncData=[];
+  const el=document.getElementById('sync-estado');
+  if(el)el.innerHTML='En tu Panel OTT ve a <b style="color:var(--gold)">Users → Administrar Usuarios → Backup Users → JSON</b> para descargar el archivo. Luego haz clic en <b style="color:var(--gold)">"📂 Seleccionar archivo JSON"</b> y elígelo aquí.';
+  const sl=document.getElementById('sync-lista');
+  if(sl)sl.style.display='none';
+  const bi=document.getElementById('btn-importar');
+  if(bi)bi.style.display='none';
+  abrirModal('modal-sync');
+}
+
+function normalizarLinea(l){
+  // Soporta formato XM OTT Panel (Username/Password/Expires) y Xtream Codes (username/password/exp_date)
+  const user=l.Username||l.username||l.user||l.USER||'';
+  const pass=l.Password||l.password||l.pass||l.PASS||'';
+  const status=l.Status||l.status||l.enabled||'active';
+  const activo=typeof status==='string'?/active|activo|1/i.test(status):status===1||status==='1';
+  const notes=l.Notes||l.notes||l.Creator||l.creator||l.Owner||l.owner||'';
+  let vence='';
+  if(l.Expires||l.expires||l.Expiry||l.expiry){
+    vence=(l.Expires||l.expires||l.Expiry||l.expiry||'').split(' ')[0];
+  }else if(l.exp_date&&l.exp_date!=='0'){
+    vence=new Date(parseInt(l.exp_date)*1000).toISOString().split('T')[0];
+  }else if(l.expiration){
+    vence=l.expiration.split(' ')[0];
+  }
+  const pkg=(l.Package||l.package||l.Bouquet||l.bouquet||l.plan||'').toString().toLowerCase();
+  let tipo='mensual';
+  if(/trial|prueba|demo|test|free/i.test(pkg))tipo='trial';
+  else if(/anual|annual|year|12\s*mes/i.test(pkg))tipo='anual';
+  return{user,pass,activo,vence,notes,tipo,_raw:l};
+}
+
+function procesarLineas(raw){
+  let lineas=[];
+  if(Array.isArray(raw))lineas=raw;
+  else if(typeof raw==='object')lineas=Object.values(raw);
+  lineas=lineas.filter(l=>l&&typeof l==='object');
+
+  if(!lineas.length){
+    document.getElementById('sync-estado').innerHTML='<span style="color:var(--red)">No se encontraron clientes en el archivo.</span>';
+    return;
+  }
+
+  syncData=lineas.map(normalizarLinea);
+  const existentes=new Set(DB.clientes.map(c=>c.user));
+  const estado=document.getElementById('sync-estado');
+  const nuevos=syncData.filter(l=>!existentes.has(l.user)).length;
+  estado.innerHTML=`<span style="color:var(--green)">✅ Se encontraron <b>${lineas.length}</b> clientes — <b>${nuevos}</b> nuevos, <b>${lineas.length-nuevos}</b> ya existen.</span>`;
+
+  const tb=document.getElementById('tb-sync');
+  tb.innerHTML=syncData.map((l,i)=>{
+    const yaExiste=existentes.has(l.user);
+    return`<tr style="border-top:1px solid rgba(74,108,247,.15)">
+      <td style="padding:6px 10px"><input type="checkbox" class="sync-chk" data-idx="${i}" ${yaExiste?'':'checked'}></td>
+      <td style="padding:6px 10px;font-family:monospace;color:#f0eeff">${escH(l.user)}</td>
+      <td style="padding:6px 10px;font-family:monospace;color:var(--muted)">${escH(l.pass)}</td>
+      <td style="padding:6px 10px;color:${l.vence&&l.vence<today()?'var(--red)':'var(--gold)'}">${l.vence||'—'}</td>
+      <td style="padding:6px 10px"><span class="bdg ${l.activo?'bdg-activo':'bdg-vencido'}">${l.activo?'Activo':'Vencido'}</span></td>
+      <td style="padding:6px 10px">${yaExiste?'<span style="color:#f97316;font-size:11px">⚠️ Ya existe</span>':'<span style="color:var(--green);font-size:11px">✓ Nuevo</span>'}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('sync-count').textContent=`${lineas.length} clientes — selecciona cuáles importar`;
+  document.getElementById('sync-lista').style.display='block';
+  document.getElementById('btn-importar').style.display='inline-flex';
+}
+
+function syncSelAll(v){
+  document.querySelectorAll('.sync-chk').forEach(c=>c.checked=v);
+  const all=document.getElementById('chk-all');
+  if(all)all.checked=v;
+}
+
+function importarSeleccionados(){
+  const selIdx=[];
+  document.querySelectorAll('.sync-chk:checked').forEach(c=>selIdx.push(parseInt(c.dataset.idx)));
+  if(!selIdx.length)return alert('Selecciona al menos un cliente');
+
+  let nuevos=0,actualizados=0;
+
+  selIdx.forEach(i=>{
+    const l=syncData[i];if(!l)return;
+    const vence=l.vence||addMeses(today(),1);
+    const obj={
+      id:uid(),
+      nombre:l.user,
+      tel:'',
+      user:l.user,
+      pass:l.pass,
+      device:'android-tv',
+      plan:'1',
+      tipo:l.tipo,
+      precio:0,
+      inicio:today(),
+      vencimiento:vence,
+      notas:l.notes||'',
+      debe:0,
+      activo:l.activo
+    };
+    const idx=DB.clientes.findIndex(c=>c.user===obj.user);
+    if(idx!==-1){DB.clientes[idx]={...DB.clientes[idx],pass:obj.pass,vencimiento:obj.vencimiento,activo:obj.activo};actualizados++;}
+    else{DB.clientes.push(obj);nuevos++;}
+  });
+
+  save();renderAll();cerrarModal('modal-sync');
+  alert(`✅ Importación completa:\n• ${nuevos} clientes nuevos\n• ${actualizados} actualizados\n\nPuedes editar cada cliente (✏️) para agregar nombre, teléfono y dispositivo.`);
+}
+
+function triggerFileImport(){
+  document.getElementById('file-import-input').value='';
+  document.getElementById('file-import-input').click();
+}
+
+function importarArchivo(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const txt=e.target.result;
+    try{
+      const json=JSON.parse(txt);
+      procesarLineas(Array.isArray(json)?json:Object.values(json));
+    }catch{
+      const lineas=txt.split('\n').filter(l=>l.trim());
+      const header=(lineas[0]||'').toLowerCase();
+      let datos=[];
+      if(header.includes('username')||header.includes('usuario')){
+        const cols=lineas[0].split(',').map(c=>c.trim().toLowerCase().replace(/"/g,''));
+        const uIdx=cols.findIndex(c=>c.includes('user'));
+        const pIdx=cols.findIndex(c=>c.includes('pass')||c.includes('contra'));
+        const eIdx=cols.findIndex(c=>c.includes('exp')||c.includes('venc'));
+        datos=lineas.slice(1).map(l=>{
+          const p=l.split(',').map(c=>c.trim().replace(/"/g,''));
+          const expRaw=eIdx>=0?p[eIdx]:'';
+          const expTs=expRaw?Math.floor(new Date(expRaw)/1000).toString():'';
+          return{username:p[uIdx]||'',password:p[pIdx]||'',exp_date:expTs,enabled:'1',notes:''};
+        }).filter(l=>l.username);
+      }else{
+        datos=lineas.map(l=>{const p=l.split(',');return{username:(p[0]||'').trim().replace(/"/g,''),password:(p[1]||'').trim().replace(/"/g,''),exp_date:p[2]?Math.floor(new Date(p[2].trim().replace(/"/g,''))/1000).toString():'',enabled:'1',notes:''};}).filter(l=>l.username);
+      }
+      procesarLineas(datos);
+    }
+  };
+  reader.readAsText(file);
 }
 
 function backupData(){
