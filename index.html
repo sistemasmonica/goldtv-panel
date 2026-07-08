@@ -644,14 +644,9 @@ const TIPO_BADGE={'mensual':'<span class="bdg" style="background:#1565c0">💳 M
 async function checkLicense(){
   if(!VENDOR_ID||!LICENSE_KEY){showLock();return false;}
   try{
-    const{data,error}=await sb.from('gtv_licencias').select('active,vendor_name,demo').eq('vendor_id',VENDOR_ID).eq('license_key',LICENSE_KEY).maybeSingle();
+    const{data,error}=await sb.from('gtv_licencias').select('active,vendor_name').eq('vendor_id',VENDOR_ID).eq('license_key',LICENSE_KEY).maybeSingle();
     if(error||!data||!data.active){showLock();return false;}
     document.getElementById('vendor-label').textContent='👤 '+data.vendor_name;
-    if(data.demo){
-      IS_DEMO=true;
-      const banner=document.getElementById('demo-banner');
-      if(banner)banner.style.display='flex';
-    }
     return true;
   }catch(e){showLock();return false;}
 }
