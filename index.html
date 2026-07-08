@@ -520,6 +520,11 @@ select option{background:#1a1735}
       <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6">
         Copia la columna <b>Username</b> de tus Subresellers en el Panel OTT (uno por línea) y pégalos aquí. Se les crea automáticamente su propio link de administración de clientes.
       </div>
+      <div class="btn-row" style="margin-bottom:10px">
+        <button class="btn btn-gold" onclick="document.getElementById('sv-file-input').click()">📂 Seleccionar archivo (JSON/CSV del OTT)</button>
+        <input type="file" id="sv-file-input" accept=".json,.csv,.txt" style="display:none" onchange="importarSubvendedoresArchivo(this)">
+      </div>
+      <div style="text-align:center;color:var(--muted);font-size:11px;margin:2px 0 10px;letter-spacing:1px">― o pega los nombres a mano ―</div>
       <textarea id="sv-nombres" placeholder="Sub1&#10;Sub2&#10;Sub3" style="width:100%;min-height:90px;background:var(--surface2);border:1px solid rgba(74,108,247,.4);border-radius:8px;padding:10px;color:var(--text);font-size:12px;font-family:monospace;resize:vertical"></textarea>
       <div class="btn-row" style="margin-top:10px">
         <button class="btn btn-gold" id="btn-crear-sv" onclick="crearSubvendedores()">Crear todos →</button>
@@ -791,12 +796,44 @@ function load(){
 }
 
 // ===== SUB-VENDEDORES (solo vendedores directos) =====
-async function crearSubvendedores(){
+function crearSubvendedores(){
   const txt=document.getElementById('sv-nombres').value.trim();
   if(!txt)return alert('Pega al menos un nombre');
   const nombres=[...new Set(txt.split('\n').map(l=>l.trim()).filter(Boolean))];
   if(!nombres.length)return alert('No se detectaron nombres válidos');
+  procesarSubvendedores(nombres);
+}
 
+function importarSubvendedoresArchivo(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const txt=e.target.result;
+    let nombres=[];
+    try{
+      const json=JSON.parse(txt);
+      const lineas=Array.isArray(json)?json:Object.values(json);
+      nombres=lineas.filter(l=>l&&typeof l==='object').map(l=>l.Username||l.username||l.user||l.USER||l.nombre||l.name||'').filter(Boolean);
+    }catch{
+      const lineas=txt.split('\n').map(l=>l.trim()).filter(Boolean);
+      const header=(lineas[0]||'').toLowerCase();
+      if(header.includes('username')||header.includes('usuario')){
+        const cols=lineas[0].split(',').map(c=>c.trim().toLowerCase().replace(/"/g,''));
+        const uIdx=cols.findIndex(c=>c.includes('user'));
+        nombres=lineas.slice(1).map(l=>(l.split(',')[uIdx]||'').trim().replace(/"/g,'')).filter(Boolean);
+      }else{
+        nombres=lineas.map(l=>l.split(',')[0].trim().replace(/"/g,'')).filter(Boolean);
+      }
+    }
+    nombres=[...new Set(nombres)];
+    if(!nombres.length)return alert('No se encontraron nombres de usuario en el archivo');
+    procesarSubvendedores(nombres);
+  };
+  reader.readAsText(file);
+  input.value='';
+}
+
+async function procesarSubvendedores(nombres){
   const{data:existentes}=await sb.from('gtv_licencias').select('vendor_name');
   const nombresExistentes=new Set((existentes||[]).map(v=>(v.vendor_name||'').toLowerCase()));
 
