@@ -180,6 +180,7 @@ select option{background:#1a1735}
   <button class="nt" onclick="tab('guias',this)">📖 Guías instalación</button>
   <button class="nt" onclick="tab('renovaciones',this)">📋 Renovaciones</button>
   <button class="nt" onclick="tab('ayuda',this)">❓ Ayuda</button>
+  <button class="nt" id="nt-subvendedores" style="display:none" onclick="tab('subvendedores',this)">👥 Mis Vendedores</button>
 </div>
 
 <!-- ===== INICIO ===== -->
@@ -511,6 +512,37 @@ select option{background:#1a1735}
 </div>
 </div>
 
+<!-- ===== MIS VENDEDORES (solo vendedores directos) ===== -->
+<div id="pn-subvendedores" class="pn">
+  <div class="card">
+    <div class="card-inner">
+      <div class="card-t">👥 Crear sub-vendedores</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6">
+        Copia la columna <b>Username</b> de tus Subresellers en el Panel OTT (uno por línea) y pégalos aquí. Se les crea automáticamente su propio link de administración de clientes.
+      </div>
+      <textarea id="sv-nombres" placeholder="Sub1&#10;Sub2&#10;Sub3" style="width:100%;min-height:90px;background:var(--surface2);border:1px solid rgba(74,108,247,.4);border-radius:8px;padding:10px;color:var(--text);font-size:12px;font-family:monospace;resize:vertical"></textarea>
+      <div class="btn-row" style="margin-top:10px">
+        <button class="btn btn-gold" id="btn-crear-sv" onclick="crearSubvendedores()">Crear todos →</button>
+      </div>
+      <div id="sv-resultado" style="display:none;margin-top:12px;background:var(--surface2);border:1px solid rgba(34,197,94,.4);border-radius:8px;padding:12px;font-size:12px;color:var(--green)"></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <div class="card-inner">
+      <div class="sh" style="margin-bottom:10px">
+        <h2 style="font-size:14px">Mis sub-vendedores</h2>
+        <button class="btn btn-s btn-sm" onclick="cargarSubvendedores()">↺ Actualizar</button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Nombre</th><th>Estado</th><th>Link</th></tr></thead>
+          <tbody id="tb-subvendedores"><tr><td colspan="3" class="empty">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ===== RENOVACIONES ===== -->
 <div id="pn-renovaciones" class="pn">
   <div class="sc-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px">
@@ -698,9 +730,13 @@ const TIPO_BADGE={'mensual':'<span class="bdg" style="background:#1565c0">💳 M
 async function checkLicense(){
   if(!VENDOR_ID||!LICENSE_KEY){showLock();return false;}
   try{
-    const{data,error}=await sb.from('gtv_licencias').select('active,vendor_name').eq('vendor_id',VENDOR_ID).eq('license_key',LICENSE_KEY).maybeSingle();
+    const{data,error}=await sb.from('gtv_licencias').select('active,vendor_name,parent_vendor_id').eq('vendor_id',VENDOR_ID).eq('license_key',LICENSE_KEY).maybeSingle();
     if(error||!data||!data.active){showLock();return false;}
     document.getElementById('vendor-label').textContent='👤 '+data.vendor_name;
+    if(!data.parent_vendor_id){
+      const nt=document.getElementById('nt-subvendedores');
+      if(nt)nt.style.display='';
+    }
     return true;
   }catch(e){showLock();return false;}
 }
@@ -754,6 +790,57 @@ function load(){
   }catch(e){}
 }
 
+// ===== SUB-VENDEDORES (solo vendedores directos) =====
+async function crearSubvendedores(){
+  const txt=document.getElementById('sv-nombres').value.trim();
+  if(!txt)return alert('Pega al menos un nombre');
+  const nombres=[...new Set(txt.split('\n').map(l=>l.trim()).filter(Boolean))];
+  if(!nombres.length)return alert('No se detectaron nombres válidos');
+
+  const{data:existentes}=await sb.from('gtv_licencias').select('vendor_name');
+  const nombresExistentes=new Set((existentes||[]).map(v=>(v.vendor_name||'').toLowerCase()));
+
+  const btn=document.getElementById('btn-crear-sv');
+  btn.textContent='Creando...';btn.disabled=true;
+
+  let creados=0,omitidos=0,errores=0;
+  const links=[];
+  for(const nombre of nombres){
+    if(nombresExistentes.has(nombre.toLowerCase())){omitidos++;continue;}
+    const base=nombre.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'').replace(/[^a-z0-9]/g,'');
+    const vendorId=base+(Math.floor(Math.random()*90)+10);
+    const sufijo=nombre.toUpperCase().replace(/\s+/g,'').substring(0,8);
+    const licenseKey='GOLD-'+sufijo+'-2026';
+    const{error}=await sb.from('gtv_licencias').insert({vendor_id:vendorId,license_key:licenseKey,vendor_name:nombre,active:true,demo:false,parent_vendor_id:VENDOR_ID});
+    if(error){errores++;continue;}
+    creados++;
+    links.push(nombre+': https://sistemasmonica.github.io/goldtv-panel/?v='+vendorId+'&k='+licenseKey);
+  }
+
+  btn.textContent='Crear todos →';btn.disabled=false;
+  const resDiv=document.getElementById('sv-resultado');
+  resDiv.style.display='block';
+  resDiv.innerHTML=`✅ <b>${creados}</b> creados`+(omitidos?` · ⚠️ <b>${omitidos}</b> omitidos (ya existían)`:'')+(errores?` · ❌ <b>${errores}</b> con error`:'')+
+    (links.length?'<br><br><textarea readonly style="width:100%;min-height:120px;background:var(--bg);border:1px solid rgba(34,197,94,.4);border-radius:6px;padding:8px;color:var(--gold);font-size:11px;font-family:monospace">'+links.join('\n')+'</textarea>':'');
+  document.getElementById('sv-nombres').value='';
+  cargarSubvendedores();
+}
+
+async function cargarSubvendedores(){
+  const tbody=document.getElementById('tb-subvendedores');
+  const{data,error}=await sb.from('gtv_licencias').select('*').eq('parent_vendor_id',VENDOR_ID).order('vendor_name');
+  if(error){tbody.innerHTML='<tr><td colspan="3" class="empty">Error al cargar</td></tr>';return;}
+  if(!data||!data.length){tbody.innerHTML='<tr><td colspan="3" class="empty">Aún no has creado sub-vendedores.</td></tr>';return;}
+  tbody.innerHTML=data.map(v=>{
+    const link=`https://sistemasmonica.github.io/goldtv-panel/?v=${encodeURIComponent(v.vendor_id)}&k=${encodeURIComponent(v.license_key)}`;
+    return`<tr>
+      <td>${escH(v.vendor_name)}</td>
+      <td><span class="bdg ${v.active?'bdg-activo':'bdg-vencido'}">${v.active?'Activo':'Desactivado'}</span></td>
+      <td><button class="btn btn-s btn-sm" onclick="navigator.clipboard.writeText('${link}');this.textContent='✓ Copiado'">📋 Copiar link</button></td>
+    </tr>`;
+  }).join('');
+}
+
 // ===== UTILIDADES =====
 function uid(){return Date.now()+'_'+Math.random().toString(36).substr(2,6)}
 function today(){return new Date().toISOString().split('T')[0]}
@@ -793,6 +880,7 @@ function tab(id,el){
   if(id==='vencimientos')renderVencimientos();
   if(id==='guias')llenarSelectClientes();
   if(id==='renovaciones')renderRenovaciones();
+  if(id==='subvendedores')cargarSubvendedores();
 }
 
 function verHistorial(id){
