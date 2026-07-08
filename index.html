@@ -135,7 +135,7 @@ select option{background:#1a1735}
   <div class="lock-box">
     <div class="lock-icon">🔒</div>
     <div class="lock-title">GUÍA DE ADMINISTRACIÓN DE CLIENTES GOLDTV</div>
-    <div class="lock-msg">Tu licencia está inactiva o no es válida.<br>Contacta a tu proveedor para activar el acceso.</div>
+    <div class="lock-msg" id="lock-msg">Tu licencia está inactiva o no es válida.<br>Contacta a tu proveedor para activar el acceso.</div>
     <a class="lock-wa" href="https://wa.me/593997594528" target="_blank">📲 Contactar por WhatsApp</a>
   </div>
   <div style="color:var(--muted);font-size:10px;margin-top:16px">Powered by GOLD TV Monica · Sistema exclusivo para revendedores autorizados</div>
@@ -552,8 +552,8 @@ select option{background:#1a1735}
       </div>
       <div class="tbl-wrap">
         <table>
-          <thead><tr><th>Nombre</th><th>Estado</th><th>Link</th></tr></thead>
-          <tbody id="tb-subvendedores"><tr><td colspan="3" class="empty">Cargando...</td></tr></tbody>
+          <thead><tr><th>Nombre</th><th>Estado</th><th>Vence</th><th>Link</th></tr></thead>
+          <tbody id="tb-subvendedores"><tr><td colspan="4" class="empty">Cargando...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -747,8 +747,14 @@ const TIPO_BADGE={'mensual':'<span class="bdg" style="background:#1565c0">💳 M
 async function checkLicense(){
   if(!VENDOR_ID||!LICENSE_KEY){showLock();return false;}
   try{
-    const{data,error}=await sb.from('gtv_licencias').select('active,vendor_name,parent_vendor_id,demo').eq('vendor_id',VENDOR_ID).eq('license_key',LICENSE_KEY).maybeSingle();
+    const{data,error}=await sb.from('gtv_licencias').select('active,vendor_name,parent_vendor_id,demo,vence').eq('vendor_id',VENDOR_ID).eq('license_key',LICENSE_KEY).maybeSingle();
     if(error||!data||!data.active){showLock();return false;}
+    if(data.vence&&data.vence<today()){
+      showLock(data.demo
+        ?'Tu periodo de <b>prueba (DEMO)</b> terminó.<br>Contacta a tu proveedor para activar tu licencia completa.'
+        :'Tu acceso <b>venció</b>.<br>Contacta a tu proveedor para renovarlo.');
+      return false;
+    }
     document.getElementById('vendor-label').textContent='👤 '+data.vendor_name;
     if(!data.parent_vendor_id){
       const nt=document.getElementById('nt-subvendedores');
@@ -763,9 +769,11 @@ async function checkLicense(){
   }catch(e){showLock();return false;}
 }
 
-function showLock(){
+function showLock(msg){
   document.getElementById('loading-screen').style.display='none';
   document.getElementById('lock-screen').classList.add('on');
+  const m=document.getElementById('lock-msg');
+  if(m&&msg)m.innerHTML=msg;
 }
 
 function showApp(){
@@ -865,7 +873,8 @@ async function procesarSubvendedores(nombres){
     const vendorId=base+(Math.floor(Math.random()*90)+10);
     const sufijo=nombre.toUpperCase().replace(/\s+/g,'').substring(0,8);
     const licenseKey='GOLD-'+sufijo+'-2026';
-    const{error}=await sb.from('gtv_licencias').insert({vendor_id:vendorId,license_key:licenseKey,vendor_name:nombre,active:true,demo:false,parent_vendor_id:VENDOR_ID});
+    const vence=addDias(today(),365);
+    const{error}=await sb.from('gtv_licencias').insert({vendor_id:vendorId,license_key:licenseKey,vendor_name:nombre,active:true,demo:false,parent_vendor_id:VENDOR_ID,vence});
     if(error){errores++;continue;}
     creados++;
     links.push(nombre+': https://sistemasmonica.github.io/goldtv-panel/?v='+vendorId+'&k='+licenseKey);
@@ -883,16 +892,31 @@ async function procesarSubvendedores(nombres){
 async function cargarSubvendedores(){
   const tbody=document.getElementById('tb-subvendedores');
   const{data,error}=await sb.from('gtv_licencias').select('*').eq('parent_vendor_id',VENDOR_ID).order('vendor_name');
-  if(error){tbody.innerHTML='<tr><td colspan="3" class="empty">Error al cargar</td></tr>';return;}
-  if(!data||!data.length){tbody.innerHTML='<tr><td colspan="3" class="empty">Aún no has creado sub-vendedores.</td></tr>';return;}
+  if(error){tbody.innerHTML='<tr><td colspan="4" class="empty">Error al cargar</td></tr>';return;}
+  if(!data||!data.length){tbody.innerHTML='<tr><td colspan="4" class="empty">Aún no has creado sub-vendedores.</td></tr>';return;}
+  const hoy=today();
   tbody.innerHTML=data.map(v=>{
     const link=`https://sistemasmonica.github.io/goldtv-panel/?v=${encodeURIComponent(v.vendor_id)}&k=${encodeURIComponent(v.license_key)}`;
+    const vencido=v.vence&&v.vence<hoy;
+    const venceTxt=v.vence?`<span style="color:${vencido?'var(--red)':'var(--muted)'};font-weight:${vencido?'700':'400'}">${v.vence}${vencido?' (vencido)':''}</span>`:'—';
     return`<tr>
       <td>${escH(v.vendor_name)}</td>
       <td><span class="bdg ${v.active?'bdg-activo':'bdg-vencido'}">${v.active?'Activo':'Desactivado'}</span></td>
-      <td><button class="btn btn-s btn-sm" onclick="navigator.clipboard.writeText('${link}');this.textContent='✓ Copiado'">📋 Copiar link</button></td>
+      <td style="font-size:11px">${venceTxt}</td>
+      <td>
+        <button class="btn btn-s btn-sm" onclick="navigator.clipboard.writeText('${link}');this.textContent='✓ Copiado'">📋 Copiar link</button>
+        <button class="btn btn-s btn-sm" onclick="renovarSubvendedor('${escH(v.vendor_id)}')">🔄 Renovar 1 año</button>
+      </td>
     </tr>`;
   }).join('');
+}
+
+async function renovarSubvendedor(vendorId){
+  if(!confirm('¿Renovar el acceso de este sub-vendedor por 1 año más?'))return;
+  const vence=addDias(today(),365);
+  const{error}=await sb.from('gtv_licencias').update({vence,active:true}).eq('vendor_id',vendorId);
+  if(error){alert('Error: '+error.message);return;}
+  cargarSubvendedores();
 }
 
 // ===== UTILIDADES =====
@@ -906,6 +930,11 @@ function abrirModal(id){document.getElementById(id).classList.add('on')}
 function addMeses(fecha,meses){
   const d=new Date(fecha+'T12:00:00');
   d.setMonth(d.getMonth()+parseInt(meses));
+  return d.toISOString().split('T')[0];
+}
+function addDias(fecha,dias){
+  const d=new Date(fecha+'T12:00:00');
+  d.setDate(d.getDate()+parseInt(dias));
   return d.toISOString().split('T')[0];
 }
 
