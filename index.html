@@ -412,7 +412,9 @@ select option{background:#1a1735}
         <div class="btn-row">
           <button class="btn btn-wa" onclick="enviarWA('guia')">📲 Enviar por WhatsApp</button>
           <button class="btn btn-s" onclick="copiarMensaje('guia-msg')">📋 Copiar</button>
+          <button class="btn" style="background:linear-gradient(135deg,#f97316,#ea580c);color:#fff" onclick="verImagenGuia()">🖼️ Ver imagen para captura</button>
         </div>
+        <p style="font-size:11px;color:var(--muted);margin-top:8px">💡 Se abre una tarjeta visual — tómale captura de pantalla y envíasela al cliente junto con el mensaje (WhatsApp no permite adjuntar imágenes automáticamente).</p>
       </div>
     </div>
   </div>
@@ -1547,6 +1549,58 @@ function enviarWA(){
   const tel=c?.tel?.replace(/\D/g,'')||'';
   if(tel)window.open('https://wa.me/593'+tel.replace(/^0/,'')+'?text='+encodeURIComponent(_guiaMsgActual),'_blank');
   else window.open('https://wa.me/?text='+encodeURIComponent(_guiaMsgActual),'_blank');
+}
+
+function verImagenGuia(){
+  const device=document.getElementById('guia-device').value;
+  const win=window.open('','_blank');
+  const base=`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
+    body{background:#0d0b1f;padding:20px;display:flex;justify-content:center}
+    .card{width:100%;max-width:420px;background:linear-gradient(180deg,#1a1a2e,#0d0b1f);border-radius:18px;padding:28px 22px;color:#fff;text-align:center}
+    .icon{width:70px;height:70px;background:linear-gradient(135deg,#f97316,#ea580c);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:34px;margin:0 auto 16px}
+    h1{font-size:17px;font-weight:800;letter-spacing:.5px;line-height:1.4;margin-bottom:26px}
+    .paso{display:flex;align-items:flex-start;gap:12px;background:rgba(249,115,22,.12);border-radius:12px;padding:14px 16px;margin-bottom:14px;text-align:left}
+    .num{width:26px;height:26px;border-radius:50%;background:#f97316;color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .txt{font-size:13px;font-weight:700;line-height:1.5}
+    .code-box{background:#0d0b1f;border:2px dashed #f97316;border-radius:12px;padding:14px;margin:6px 0 14px;font-size:24px;font-weight:900;color:#fde68a;letter-spacing:2px}
+    .btn-print{margin-top:18px;background:#f97316;color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:13px;font-weight:700;cursor:pointer}
+    @media print{.btn-print{display:none}}
+  </style></head><body>`;
+  let content='';
+  if(device==='android-tv'||device==='tv-box'||device==='fire-tv'){
+    content=`<div class="card">
+      <div class="icon">📥</div>
+      <h1>DESCARGAR APP GOLD TV<br>DESDE DOWNLOADER</h1>
+      <div class="paso"><div class="num">1</div><div class="txt">Descarga e instala <b>Downloader</b> desde ${device==='fire-tv'?'Amazon App Store':'Google Play Store'}</div></div>
+      <div class="paso"><div class="num">2</div><div class="txt">Abre Downloader e ingresa este código:</div></div>
+      <div class="code-box">${DOWNLOADER_CODE}</div>
+      <div class="paso"><div class="num">3</div><div class="txt">Descarga e instala la app GOLD TV</div></div>
+      <button class="btn-print" onclick="window.print()">🖨️ Imprimir / Guardar como PDF</button>
+    </div>`;
+  }else if(device==='celular'){
+    content=`<div class="card">
+      <div class="icon">📱</div>
+      <h1>DESCARGAR APP GOLD TV<br>EN TU CELULAR</h1>
+      <div class="paso"><div class="num">1</div><div class="txt">Abre <b>Chrome</b> en tu celular</div></div>
+      <div class="paso"><div class="num">2</div><div class="txt">Escribe este link en la barra de direcciones:</div></div>
+      <div class="code-box" style="font-size:15px;word-break:break-all">${DOWNLOADER_LINK}</div>
+      <div class="paso"><div class="num">3</div><div class="txt">Descarga e instala la app GOLD TV</div></div>
+      <button class="btn-print" onclick="window.print()">🖨️ Imprimir / Guardar como PDF</button>
+    </div>`;
+  }else{
+    content=`<div class="card">
+      <div class="icon">📺</div>
+      <h1>INSTALACIÓN GOLD TV</h1>
+      <div class="paso"><div class="num">1</div><div class="txt">Instala la app de lista M3U indicada en tu guía</div></div>
+      <div class="paso"><div class="num">2</div><div class="txt">Selecciona "Agregar lista M3U"</div></div>
+      <div class="paso"><div class="num">3</div><div class="txt">Pega el link que te compartimos por WhatsApp</div></div>
+      <button class="btn-print" onclick="window.print()">🖨️ Imprimir / Guardar como PDF</button>
+    </div>`;
+  }
+  win.document.write(base+content+'</body></html>');
+  win.document.close();
 }
 
 function copiarMensaje(id){
