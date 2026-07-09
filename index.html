@@ -180,6 +180,7 @@ select option{background:#1a1735}
   <button class="nt" onclick="tab('guias',this)">📖 Guías instalación</button>
   <button class="nt" onclick="tab('renovaciones',this)">📋 Renovaciones</button>
   <button class="nt" onclick="tab('ayuda',this)">❓ Ayuda</button>
+  <button class="nt" onclick="tab('vendedores',this)">🏪 Vendedores</button>
   <button class="nt" id="nt-subvendedores" style="display:none" onclick="tab('subvendedores',this)">👥 Mis Vendedores</button>
 </div>
 
@@ -218,6 +219,7 @@ select option{background:#1a1735}
       <button class="btn btn-gold btn-sm" onclick="tab('nuevo',document.querySelectorAll('.nav>.nt')[2])">➕ Nuevo cliente</button>
       <button class="btn btn-sm" style="background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.5);color:#c084fc" onclick="abrirSincronizar()">🔄 Sincronizar desde OTT</button>
       <button class="btn btn-s btn-sm" onclick="exportarCSV()">⬇️ Exportar</button>
+      <button class="btn btn-sm" style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);color:#ef4444" onclick="eliminarVencidos()">🗑️ Eliminar vencidos</button>
     </div>
   </div>
   <div class="filters">
@@ -241,14 +243,41 @@ select option{background:#1a1735}
     <select id="cli-tipo-fil" onchange="renderClientes()">
       <option value="">Todos los tipos</option>
       <option value="mensual">💳 Mensual</option>
-      <option value="trial">🆓 Trial</option>
+      <option value="trimestral">📆 Trimestral</option>
+      <option value="semestral">📆 Semestral</option>
       <option value="anual">⭐ Anual</option>
+      <option value="trial">🆓 Trial</option>
     </select>
   </div>
   <div class="tbl-wrap">
     <table>
       <thead><tr><th>Cliente</th><th>Teléfono</th><th>Usuario</th><th>Dispositivo</th><th>Tipo</th><th>Vence</th><th>Estado</th><th>Precio</th><th>Acciones</th></tr></thead>
       <tbody id="tb-clientes"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== VENDEDORES (clientes tipo Vendedor) ===== -->
+<div id="pn-vendedores" class="pn">
+  <div class="sh">
+    <h2>🏪 Vendedores (Subresellers)</h2>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn btn-sm" style="background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.5);color:#c084fc" onclick="abrirModal('modal-sync-vend')">📥 Importar Subresellers</button>
+      <button class="btn btn-s btn-sm" onclick="exportarCSV()">⬇️ Exportar</button>
+    </div>
+  </div>
+  <div class="sc-grid" id="socios-resumen" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px;display:none">
+    <div class="sc"><div class="sc-lbl">🤝 Total Socios</div><div class="sc-val" style="color:#e9d5ff" id="soc-total">0</div></div>
+    <div class="sc"><div class="sc-lbl">Mensual esperado</div><div class="sc-val" style="color:var(--gold)" id="soc-esperado">$0.00</div><div class="sc-sub">suma de planes activos</div></div>
+    <div class="sc"><div class="sc-lbl">Al día / Pendientes</div><div class="sc-val" style="color:var(--green)" id="soc-aldia">0</div><div class="sc-sub" id="soc-pendientes-sub">0 pendientes</div></div>
+  </div>
+  <div class="filters">
+    <input type="search" id="vend-q" placeholder="Buscar nombre..." oninput="renderVendedoresCli()" style="min-width:200px">
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Vendedor</th><th>Categoría</th><th>Teléfono</th><th>Vence</th><th>Estado</th><th>Plan / Precio</th><th>Acciones</th></tr></thead>
+      <tbody id="tb-vendedores-cli"></tbody>
     </table>
   </div>
 </div>
@@ -279,18 +308,26 @@ select option{background:#1a1735}
         </select>
       </div>
       <div class="fg"><label>Plan (meses)</label>
-        <select id="cli-plan">
-          <option value="1">1 mes</option>
-          <option value="3">3 meses</option>
-          <option value="6">6 meses</option>
-          <option value="12">12 meses</option>
+        <select id="cli-plan" onchange="calcVence();calcularPrecioSugerido()">
+          <option value="1">1 mes (Mensual)</option>
+          <option value="3">3 meses (Trimestral)</option>
+          <option value="6">6 meses (Semestral)</option>
+          <option value="12">12 meses (Anual)</option>
         </select>
       </div>
       <div class="fg"><label>Tipo de cliente</label>
         <select id="cli-tipo">
           <option value="mensual">💳 Mensual</option>
-          <option value="trial">🆓 Trial / Prueba</option>
+          <option value="trimestral">📆 Trimestral</option>
+          <option value="semestral">📆 Semestral</option>
           <option value="anual">⭐ Anual</option>
+          <option value="trial">🆓 Trial / Prueba</option>
+        </select>
+      </div>
+      <div class="fg"><label>Cantidad de dispositivos</label>
+        <select id="cli-ndisp" onchange="calcularPrecioSugerido()">
+          <option value="1-2">1 o 2 dispositivos</option>
+          <option value="3">3 dispositivos</option>
         </select>
       </div>
     </div>
@@ -448,23 +485,35 @@ select option{background:#1a1735}
   <div class="ay-warn">⚠️ Los sub-vendedores que crees aquí <b>no pueden crear más sub-vendedores</b> — ellos solo administran sus propios clientes.</div>
 </div>
 
+<!-- VENDEDORES / SOCIOS -->
+<div class="ay-sec">
+  <div class="ay-sec-t"><span>🏪</span> Pestaña "Vendedores": llevar control de tus propios Subresellers</div>
+  <div class="ay-paso"><div class="ay-n">1</div><div>Esta pestaña es distinta a "Mis Vendedores" — aquí no das acceso a nadie, solo llevas <b>tu propio control</b> de cobros a tus Subresellers/Socios</div></div>
+  <div class="ay-paso"><div class="ay-n">2</div><div>Ve a la pestaña <b>🏪 Vendedores</b> → <b>"📥 Importar Subresellers"</b>, y pega las filas copiadas de tu tabla de Subresellers en el Panel OTT (igual que en "Mis Vendedores")</div></div>
+  <div class="ay-paso"><div class="ay-n">3</div><div>En "Categoría" elige <b>🏪 Vendedor</b> (normal) o <b>🤝 Socio</b> (paga un plan mensual fijo)</div></div>
+  <div class="ay-paso"><div class="ay-n">4</div><div>Si es Socio, en "Plan / Precio" elige <b>$70 / $150 / $250</b> o "Otro monto"</div></div>
+  <div class="ay-paso"><div class="ay-n">5</div><div>Para registrar que te pagó, usa el botón <b>📅</b> igual que con cualquier cliente — ahí puedes poner el método de pago (Transferencia/Efectivo/Depósito) y subir la foto del comprobante</div></div>
+  <div class="ay-tip">✅ Arriba de la tabla aparece un resumen: cuántos Socios tienes, cuánto esperas cobrar al mes, y quién está al día.</div>
+</div>
+
 <!-- AGREGAR CLIENTE -->
 <div class="ay-sec">
   <div class="ay-sec-t"><span>1️⃣</span> Cómo agregar un cliente nuevo (uno por uno)</div>
   <div class="ay-paso"><div class="ay-n">1</div><div>Ve a la pestaña <b>➕ Nuevo cliente</b> en el menú de arriba</div></div>
   <div class="ay-paso"><div class="ay-n">2</div><div>Llena los datos: <b>Nombre</b> del cliente, <b>Teléfono</b> (con 0 al inicio), <b>Usuario</b> y <b>Contraseña</b> IPTV que le diste en el OTT panel</div></div>
-  <div class="ay-paso"><div class="ay-n">3</div><div>Elige el <b>Tipo</b> (Mensual, Trial/Prueba o Anual) y la <b>fecha de vencimiento</b></div></div>
+  <div class="ay-paso"><div class="ay-n">3</div><div>Elige el <b>Plan</b> (Mensual/Trimestral/Semestral/Anual) y la <b>Cantidad de dispositivos</b> (1-2 o 3) — el <b>Precio</b> se llena solo si tienes ese plan configurado, o lo escribes a mano</div></div>
   <div class="ay-paso"><div class="ay-n">4</div><div>Haz clic en <b>Guardar cliente</b> — se guarda en la nube automáticamente</div></div>
-  <div class="ay-tip">✅ Los datos se guardan en la nube. Puedes cerrar el celular y cuando vuelvas a abrir el link siguen ahí.</div>
+  <div class="ay-tip">✅ Los datos se guardan en la nube. Puedes cerrar el celular y cuando vuelvas a abrir el link siguen ahí. En la lista de Clientes también puedes cambiar el Tipo directo desde ahí.</div>
 </div>
 
 <!-- RENOVAR -->
 <div class="ay-sec">
-  <div class="ay-sec-t"><span>2️⃣</span> Cómo actualizar la fecha de un cliente</div>
+  <div class="ay-sec-t"><span>2️⃣</span> Cómo registrar un pago / actualizar la fecha de un cliente</div>
   <div class="ay-paso"><div class="ay-n">1</div><div>Ve a <b>👥 Clientes</b> y busca al cliente que va a renovar</div></div>
   <div class="ay-paso"><div class="ay-n">2</div><div>Haz clic en el botón <b>📅 Actualizar fecha</b> al lado del cliente</div></div>
-  <div class="ay-paso"><div class="ay-n">3</div><div>Elige cuántos meses renueva y el precio cobrado, luego <b>Confirmar renovación</b></div></div>
-  <div class="ay-paso"><div class="ay-n">4</div><div>La fecha de vencimiento se actualiza automáticamente</div></div>
+  <div class="ay-paso"><div class="ay-n">3</div><div>Elige cuántos meses renueva, el precio cobrado y el <b>Método de pago</b> (Transferencia/Efectivo/Depósito)</div></div>
+  <div class="ay-paso"><div class="ay-n">4</div><div>Si quieres, pon el <b>N° de referencia</b> y sube una <b>foto o PDF del comprobante</b> como constancia</div></div>
+  <div class="ay-paso"><div class="ay-n">5</div><div>Clic en <b>Confirmar renovación</b> — la fecha de vencimiento se actualiza y queda guardado en el historial (📋), desde donde puedes enviárselo por WhatsApp al cliente</div></div>
   <div class="ay-warn">⚠️ <b>Importante:</b> Primero renueva en el panel OTT para que el cliente tenga servicio. Luego actualiza la fecha aquí para llevar tu control personal.</div>
 </div>
 
@@ -578,7 +627,7 @@ select option{background:#1a1735}
       </div>
       <div class="tbl-wrap">
         <table><thead><tr>
-          <th>Fecha</th><th>Cliente</th><th>Tipo</th><th>Meses</th><th>Precio</th><th>Vence hasta</th>
+          <th>Fecha</th><th>Cliente</th><th>Tipo</th><th>Meses</th><th>Precio</th><th>Método</th><th>Vence hasta</th>
         </tr></thead>
         <tbody id="tb-renovaciones"></tbody></table>
       </div>
@@ -595,11 +644,14 @@ select option{background:#1a1735}
     </div>
     <div class="tbl-wrap" style="max-height:300px;overflow-y:auto">
       <table><thead><tr>
-        <th>Fecha</th><th>Meses</th><th>Precio</th><th>Nuevo vence</th>
+        <th>Fecha</th><th>Meses</th><th>Precio</th><th>Método</th><th>Comprobante</th><th>Nuevo vence</th>
       </tr></thead>
       <tbody id="hist-body"></tbody></table>
     </div>
-    <div style="margin-top:12px;text-align:right;font-size:13px;color:var(--gold)">Total cobrado: <b id="hist-total">$0.00</b></div>
+    <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <button class="btn btn-wa btn-sm" onclick="enviarWAHistorial()">📲 Enviar por WhatsApp</button>
+      <div style="font-size:13px;color:var(--gold)">Total cobrado: <b id="hist-total">$0.00</b></div>
+    </div>
   </div>
 </div>
 
@@ -622,6 +674,21 @@ select option{background:#1a1735}
         </select>
       </div>
       <div class="fg"><label>Precio ($)</label><input type="number" id="ren-precio" step="0.01" min="0"></div>
+    </div>
+    <div class="f2">
+      <div class="fg"><label>Método de pago</label>
+        <select id="ren-metodo">
+          <option value="Transferencia">🏦 Transferencia</option>
+          <option value="Efectivo">💵 Efectivo</option>
+          <option value="Depósito">🏧 Depósito</option>
+          <option value="Otro">🔁 Otro</option>
+        </select>
+      </div>
+      <div class="fg"><label>N° referencia / banco (opcional)</label><input type="text" id="ren-referencia" placeholder="Ej: Banco Pichincha #123456"></div>
+    </div>
+    <div class="fg"><label>Comprobante (foto o PDF, opcional)</label>
+      <input type="file" id="ren-comprobante-file" accept="image/*,.pdf" onchange="cargarComprobante(this)">
+      <div id="ren-comprobante-info" style="font-size:11px;color:var(--muted);margin-top:4px"></div>
     </div>
     <input type="hidden" id="ren-cli-id">
     <div class="btn-row">
@@ -705,6 +772,31 @@ select option{background:#1a1735}
   </div>
 </div>
 
+<!-- MODAL IMPORTAR SUBRESELLERS COMO CLIENTES TIPO VENDEDOR -->
+<div class="modal-overlay" id="modal-sync-vend">
+  <div class="modal" style="width:min(650px,95vw)">
+    <div class="modal-t">
+      <span>🏪 Importar Subresellers (como clientes tipo Vendedor)</span>
+      <button class="btn btn-s btn-sm" onclick="cerrarModal('modal-sync-vend')">✕</button>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px">
+      En tu Panel OTT ve a <b style="color:var(--gold)">Manage Sub-Reseller → My Sub-Reseller's</b>, selecciona con el mouse las filas de la tabla (como si seleccionaras texto) y cópialas (Ctrl+C). Pégalas abajo tal cual — el sistema detecta los nombres solo. Después edita cada uno (✏️) para poner precio y fecha de pago.
+    </div>
+    <button class="btn btn-gold" style="margin-bottom:8px" onclick="document.getElementById('sv-cli-file-input').click()">📂 O seleccionar archivo (JSON/CSV)</button>
+    <input type="file" id="sv-cli-file-input" accept=".json,.csv,.txt" style="display:none" onchange="importarSubresellersArchivo(this)">
+    <div style="text-align:center;color:var(--muted);font-size:11px;margin:2px 0 8px;letter-spacing:1px">― pega aquí las filas copiadas de la tabla (o Username,Credits a mano) ―</div>
+    <textarea id="sv-cli-pegado" placeholder="Pega aquí las filas seleccionadas de la tabla Subresellers, o escribe:&#10;Mgloja26&#10;KleverGonz26" style="width:100%;min-height:110px;background:var(--surface2);border:1px solid rgba(124,58,237,.4);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;font-family:monospace;resize:vertical"></textarea>
+    <div class="btn-row" style="margin-top:8px">
+      <button class="btn btn-gold" id="btn-imp-sv-cli" onclick="importarSubresellersPegado()">Importar todos →</button>
+      <button class="btn btn-s" onclick="cerrarModal('modal-sync-vend')">Cerrar</button>
+    </div>
+    <div id="sv-cli-resultado" style="display:none;margin-top:10px;background:var(--surface2);border:1px solid rgba(34,197,94,.4);border-radius:8px;padding:12px;font-size:12px;color:var(--green)"></div>
+    <div style="margin-top:14px;border-top:1px solid rgba(124,58,237,.3);padding-top:10px">
+      <button class="btn btn-sm" style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);color:#ef4444" onclick="limpiarVendedoresInvalidos()">🧹 Limpiar vendedores con nombre inválido (números/IPs)</button>
+    </div>
+  </div>
+</div>
+
 <!-- FOOTER -->
 <div class="footer">
   Powered by <a href="https://wa.me/593997594528" target="_blank">GOLD TV Monica</a> · Sistema exclusivo para revendedores autorizados · © 2026
@@ -741,7 +833,34 @@ let DB={clientes:[]};
 let IS_DEMO=false;
 
 const DISP_LABEL={'android-tv':'📺 Android TV','celular':'📱 Celular Android','smart-tv':'🖥️ Smart TV','iphone':'🍎 iPhone/iPad','tv-box':'📦 TV Box','fire-tv':'🔥 Fire TV','pc':'💻 PC'};
-const TIPO_BADGE={'mensual':'<span class="bdg" style="background:#1565c0">💳 Mensual</span>','trial':'<span class="bdg" style="background:#6b3fa0">🆓 Trial</span>','anual':'<span class="bdg" style="background:#b8860b">⭐ Anual</span>'};
+const TIPO_BADGE={'mensual':'<span class="bdg" style="background:#1565c0">💳 Mensual</span>','trimestral':'<span class="bdg" style="background:#0e7490">📆 Trimestral</span>','semestral':'<span class="bdg" style="background:#7c3aed">📆 Semestral</span>','trial':'<span class="bdg" style="background:#6b3fa0">🆓 Trial</span>','anual':'<span class="bdg" style="background:#b8860b">⭐ Anual</span>','vendedor':'<span class="bdg" style="background:#065f46">🏪 Vendedor</span>'};
+const PLAN_A_TIPO2={'1':'mensual','3':'trimestral','6':'semestral','12':'anual'};
+const TIPO_A_PLAN2={'mensual':'1','trimestral':'3','semestral':'6','anual':'12'};
+const TIPO_COLOR={'mensual':'#1565c0','trimestral':'#0e7490','semestral':'#7c3aed','anual':'#b8860b','trial':'#6b3fa0'};
+const TIPO_LABEL_SEL={'mensual':'💳 Mensual','trimestral':'📆 Trimestral','semestral':'📆 Semestral','anual':'⭐ Anual','trial':'🆓 Trial'};
+
+function cambiarTipoCliente(id,tipo){
+  const c=DB.clientes.find(x=>x.id===id);if(!c)return;
+  c.tipo=tipo;
+  const meses=TIPO_A_PLAN2[tipo];
+  if(meses){
+    c.plan=meses;
+    const ndisp=c.ndisp||'1-2';
+    const sugerido=PRECIOS_PLAN[ndisp]?.[meses];
+    if(sugerido!=null)c.precio=sugerido;
+  }
+  save();renderClientes();renderDash();
+}
+
+function eliminarVencidos(){
+  const vencidos=DB.clientes.filter(c=>(c.tipo||'mensual')!=='vendedor'&&estadoCliente(c)==='vencido');
+  if(!vencidos.length)return alert('No hay clientes vencidos para eliminar.');
+  if(!confirm(`⚠️ Se van a ELIMINAR ${vencidos.length} clientes vencidos. Esta acción no se puede deshacer.\n\nRecomendado: haz clic en "⬇️ Exportar" antes de continuar, por si necesitas recuperarlos después.\n\n¿Confirmas que quieres eliminarlos?`))return;
+  const idsVencidos=new Set(vencidos.map(c=>c.id));
+  DB.clientes=DB.clientes.filter(c=>!idsVencidos.has(c.id));
+  save();renderAll();
+  alert(`✅ ${vencidos.length} clientes vencidos eliminados.`);
+}
 
 // ===== LICENCIA =====
 async function checkLicense(){
@@ -955,23 +1074,44 @@ function tab(id,el){
   if(id==='guias')llenarSelectClientes();
   if(id==='renovaciones')renderRenovaciones();
   if(id==='subvendedores')cargarSubvendedores();
+  if(id==='vendedores')renderVendedoresCli();
 }
 
+let _histClienteId=null;
 function verHistorial(id){
   const c=DB.clientes.find(x=>x.id===id);if(!c)return;
+  _histClienteId=id;
   const hist=c.historial||[];
   const total=hist.reduce((s,h)=>s+(h.precio||0),0);
   document.getElementById('hist-titulo').textContent='📋 '+c.nombre+' — Historial';
   document.getElementById('hist-body').innerHTML=!hist.length
-    ?`<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px">Sin renovaciones registradas aún</td></tr>`
+    ?`<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">Sin renovaciones registradas aún</td></tr>`
     :hist.slice().reverse().map(h=>`<tr>
       <td>${h.fecha}</td>
       <td>${h.meses} mes${h.meses>1?'es':''}</td>
       <td style="font-family:monospace;color:var(--green)">${fmt(h.precio)}</td>
+      <td><span class="bdg" style="background:var(--surface2)">${h.metodo||'—'}</span>${h.referencia?`<div style="font-size:10px;color:var(--muted);margin-top:2px">${escH(h.referencia)}</div>`:''}</td>
+      <td>${h.comprobanteData?`<a href="${h.comprobanteData}" target="_blank" download="${escH(h.comprobanteNombre||'comprobante')}" style="color:var(--gold);font-size:11px">📎 Ver</a>`:'—'}</td>
       <td style="font-family:monospace">${h.nueva_fecha||'—'}</td>
     </tr>`).join('');
   document.getElementById('hist-total').textContent=fmt(total);
   abrirModal('modal-hist');
+}
+
+function msgHistorialPagos(c){
+  const hist=(c.historial||[]).slice().reverse();
+  const total=hist.reduce((s,h)=>s+(h.precio||0),0);
+  if(!hist.length)return`Hola ${c.nombre}! 👋\n\nAún no hay pagos registrados en tu historial. 📋`;
+  const lineas=hist.map(h=>`• ${h.fecha} — ${h.meses} mes${h.meses>1?'es':''} — ${fmt(h.precio)}${h.metodo?' — '+h.metodo:''}${h.referencia?' ('+h.referencia+')':''}`).join('\n');
+  return`Hola ${c.nombre}! 👋\n\nAquí está tu *historial de pagos* 📋\n\n${lineas}\n\n💰 *Total pagado:* ${fmt(total)}\n📅 *Próximo vencimiento:* ${c.vencimiento}\n\nCualquier consulta estoy a tu disposición 😊`;
+}
+
+function enviarWAHistorial(){
+  const c=DB.clientes.find(x=>x.id===_histClienteId);if(!c)return;
+  const msg=encodeURIComponent(msgHistorialPagos(c));
+  const tel=(c.tel||'').replace(/\D/g,'');
+  if(tel)window.open('https://wa.me/593'+tel.replace(/^0/,'')+'?text='+msg,'_blank');
+  else window.open('https://wa.me/?text='+msg,'_blank');
 }
 
 function renderRenovaciones(){
@@ -979,7 +1119,7 @@ function renderRenovaciones(){
   const todas=[];
   DB.clientes.forEach(c=>{
     (c.historial||[]).forEach(h=>{
-      todas.push({...h,nombre:c.nombre,tipo:c.tipo||'mensual'});
+      todas.push({...h,nombre:c.nombre,tipo:c.tipo||'mensual',categoria:c.categoria});
     });
   });
   todas.sort((a,b)=>b.fecha.localeCompare(a.fecha));
@@ -1001,13 +1141,14 @@ function renderRenovaciones(){
   if(q)lista=lista.filter(h=>h.nombre.toLowerCase().includes(q));
   const tb=document.getElementById('tb-renovaciones');
   if(!tb)return;
-  if(!lista.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">Sin renovaciones registradas aún</td></tr>';return;}
+  if(!lista.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">Sin renovaciones registradas aún</td></tr>';return;}
   tb.innerHTML=lista.map(h=>`<tr>
     <td>${h.fecha}</td>
     <td><b>${escH(h.nombre)}</b></td>
-    <td>${TIPO_BADGE[h.tipo]||h.tipo}</td>
+    <td>${h.tipo==='vendedor'&&h.categoria==='socio'?'<span class="bdg" style="background:#5b21b6;color:#e9d5ff">🤝 Socio</span>':(TIPO_BADGE[h.tipo]||h.tipo)}</td>
     <td style="text-align:center">${h.meses}</td>
     <td style="font-family:monospace;color:var(--green)">${fmt(h.precio)}</td>
+    <td><span class="bdg" style="background:var(--surface2)">${h.metodo||'—'}</span></td>
     <td style="font-family:monospace">${h.nueva_fecha||'—'}</td>
   </tr>`).join('');
 }
@@ -1027,12 +1168,29 @@ document.addEventListener('DOMContentLoaded',async()=>{
   await syncFromCloud();
 });
 
+const PLAN_A_TIPO={'1':'mensual','3':'trimestral','6':'semestral','12':'anual'};
+const TIPO_A_PLAN={'mensual':'1','trimestral':'3','semestral':'6','anual':'12'};
+const PRECIOS_PLAN={'3':{'1':9,'3':25,'6':50,'12':90},'1-2':{'1':5}};
+
+function calcularPrecioSugerido(){
+  const plan=document.getElementById('cli-plan').value;
+  const ndisp=document.getElementById('cli-ndisp')?.value;
+  const precioEl=document.getElementById('cli-precio');
+  if(!precioEl||!ndisp)return;
+  const sugerido=PRECIOS_PLAN[ndisp]?.[plan];
+  if(sugerido!=null)precioEl.value=sugerido;
+}
+
 function calcVence(){
   const ini=document.getElementById('cli-inicio').value;
   const plan=document.getElementById('cli-plan').value;
   const prev=document.getElementById('cli-vence-preview');
   if(ini&&plan)prev.value=addMeses(ini,plan);
   else prev.value='';
+  const tipoEl=document.getElementById('cli-tipo');
+  if(tipoEl&&plan&&PLAN_A_TIPO[plan]&&tipoEl.value!=='trial'){
+    tipoEl.value=PLAN_A_TIPO[plan];
+  }
 }
 
 function guardarCliente(){
@@ -1042,6 +1200,7 @@ function guardarCliente(){
   const pass=(document.getElementById('cli-pass').value||'').trim();
   const device=document.getElementById('cli-device').value;
   const plan=document.getElementById('cli-plan').value;
+  const ndisp=document.getElementById('cli-ndisp')?.value||'1-2';
   const tipo=document.getElementById('cli-tipo').value||'mensual';
   const precio=parseFloat(document.getElementById('cli-precio').value)||0;
   const inicio=document.getElementById('cli-inicio').value||today();
@@ -1054,12 +1213,12 @@ function guardarCliente(){
   const vencimiento=addMeses(inicio,plan);
   if(editId){
     const idx=DB.clientes.findIndex(c=>c.id===editId);
-    if(idx!==-1)DB.clientes[idx]={...DB.clientes[idx],nombre,tel,user,pass,device,plan,tipo,precio,inicio,vencimiento,notas,debe};
+    if(idx!==-1)DB.clientes[idx]={...DB.clientes[idx],nombre,tel,user,pass,device,plan,ndisp,tipo,precio,inicio,vencimiento,notas,debe};
     document.getElementById('cli-edit-id').value='';
     document.getElementById('form-titulo').textContent='Registrar nuevo cliente';
     document.getElementById('btn-guardar-cli').textContent='✅ Guardar cliente';
   }else{
-    DB.clientes.push({id:uid(),nombre,tel,user,pass,device,plan,tipo,precio,inicio,vencimiento,notas,debe,activo:true});
+    DB.clientes.push({id:uid(),nombre,tel,user,pass,device,plan,ndisp,tipo,precio,inicio,vencimiento,notas,debe,activo:true});
   }
   save();limpiarFormCliente();renderAll();
   tab('clientes',document.querySelectorAll('.nav>.nt')[1]);
@@ -1070,6 +1229,7 @@ function limpiarFormCliente(){
   ['cli-nombre','cli-tel','cli-user','cli-pass','cli-precio','cli-notas','cli-debe'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('cli-device').value='android-tv';
   document.getElementById('cli-plan').value='1';
+  document.getElementById('cli-ndisp').value='1-2';
   document.getElementById('cli-tipo').value='mensual';
   document.getElementById('cli-inicio').value=today();
   document.getElementById('cli-edit-id').value='';
@@ -1086,6 +1246,7 @@ function editarCliente(id){
   document.getElementById('cli-pass').value=c.pass||'';
   document.getElementById('cli-device').value=c.device||'android-tv';
   document.getElementById('cli-plan').value=c.plan||'1';
+  document.getElementById('cli-ndisp').value=c.ndisp||'1-2';
   document.getElementById('cli-tipo').value=c.tipo||'mensual';
   document.getElementById('cli-precio').value=c.precio||'';
   document.getElementById('cli-inicio').value=c.inicio||today();
@@ -1105,27 +1266,218 @@ function eliminarCliente(id){
   save();renderAll();
 }
 
+// ===== VENDEDORES / SOCIOS (clientes tipo Vendedor) =====
+function cambiarCategoriaVendedor(id,categoria){
+  const c=DB.clientes.find(x=>x.id===id);if(!c)return;
+  c.categoria=categoria;
+  save();renderVendedoresCli();
+}
+
+const PLANES_SOCIO=[70,150,250];
+function cambiarPlanSocio(id,valor){
+  const c=DB.clientes.find(x=>x.id===id);if(!c)return;
+  if(valor==='otro'){
+    const monto=prompt('¿Cuál es el monto mensual del plan de este socio?',c.precio||'');
+    if(monto===null)return renderVendedoresCli();
+    c.precio=parseFloat(monto)||0;
+  }else{
+    c.precio=parseFloat(valor)||0;
+  }
+  save();renderVendedoresCli();
+}
+
+function renderVendedoresCli(){
+  const q=(document.getElementById('vend-q')?.value||'').toLowerCase();
+  let lista=DB.clientes.filter(c=>(c.tipo||'')==='vendedor'&&(!q||c.nombre?.toLowerCase().includes(q)))
+    .sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||''));
+  const tb=document.getElementById('tb-vendedores-cli');
+  if(!tb)return;
+
+  const socios=DB.clientes.filter(c=>(c.tipo||'')==='vendedor'&&c.categoria==='socio');
+  const resDiv=document.getElementById('socios-resumen');
+  if(resDiv){
+    if(socios.length){
+      resDiv.style.display='grid';
+      const esperado=socios.reduce((a,c)=>a+(c.precio||0),0);
+      const aldia=socios.filter(c=>estadoCliente(c)!=='vencido').length;
+      document.getElementById('soc-total').textContent=socios.length;
+      document.getElementById('soc-esperado').textContent=fmt(esperado);
+      document.getElementById('soc-aldia').textContent=aldia;
+      document.getElementById('soc-pendientes-sub').textContent=(socios.length-aldia)+' pendientes';
+    }else{
+      resDiv.style.display='none';
+    }
+  }
+
+  if(!lista.length){tb.innerHTML='<tr><td colspan="7"><div class="empty">Sin vendedores registrados. Usa "📥 Importar Subresellers" para traerlos del OTT.</div></td></tr>';return;}
+  const BADGE={'activo':'<span class="bdg bdg-activo">Activo</span>','vence':'<span class="bdg bdg-vence">Vence pronto</span>','vencido':'<span class="bdg bdg-vencido">Vencido</span>'};
+  tb.innerHTML=lista.map(c=>{
+    const est=estadoCliente(c);
+    const dias=diasHasta(c.vencimiento);
+    const cat=c.categoria||'vendedor';
+    const esPlanFijo=PLANES_SOCIO.includes(c.precio);
+    const precioCol=cat==='socio'
+      ?`<select onchange="cambiarPlanSocio('${c.id}',this.value)" style="background:var(--surface2);border:1px solid rgba(124,58,237,.4);color:var(--gold);border-radius:5px;padding:4px 6px;font-size:11px;font-weight:700;cursor:pointer">
+          ${PLANES_SOCIO.map(p=>`<option value="${p}" ${c.precio===p?'selected':''}>$${p}/mes</option>`).join('')}
+          <option value="otro" ${!esPlanFijo?'selected':''}>${!esPlanFijo&&c.precio?'$'+fmt(c.precio).slice(1)+'/mes (otro)':'Otro monto...'}</option>
+        </select>`
+      :`<span style="font-family:monospace">${fmt(c.precio)}</span>`;
+    return`<tr>
+      <td><b>${escH(c.nombre)}</b>${c.debe&&c.debe>0?`<span style="background:#f97316;color:#fff;border-radius:8px;padding:1px 6px;font-size:10px;margin-left:5px;font-weight:600">💸 $${parseFloat(c.debe).toFixed(2)}</span>`:''}${c.notas?`<div style="font-size:10px;color:var(--muted)">${escH(c.notas)}</div>`:''}</td>
+      <td><select onchange="cambiarCategoriaVendedor('${c.id}',this.value)" style="background:${cat==='socio'?'#5b21b6':'#065f46'};color:${cat==='socio'?'#e9d5ff':'#6ee7b7'};border:none;border-radius:5px;padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer">
+        <option value="vendedor" ${cat==='vendedor'?'selected':''}>🏪 Vendedor</option>
+        <option value="socio" ${cat==='socio'?'selected':''}>🤝 Socio</option>
+      </select></td>
+      <td style="font-family:monospace">${escH(c.tel||'—')}</td>
+      <td><span style="font-family:monospace">${c.vencimiento}</span><div style="font-size:10px;color:${dias<0?'var(--red)':dias<=7?'var(--orange)':'var(--muted)'}">${dias<0?Math.abs(dias)+' días vencido':dias+' días'}</div></td>
+      <td>${BADGE[est]||''}</td>
+      <td>${precioCol}</td>
+      <td>
+        <div style="display:flex;gap:3px;flex-wrap:wrap">
+          <button class="btn btn-g btn-sm" onclick="abrirRenovar('${c.id}')" title="Registrar pago / actualizar fecha">📅</button>
+          <button class="btn btn-s btn-sm" onclick="verHistorial('${c.id}')" title="Ver historial de pagos">📋</button>
+          <button class="btn btn-s btn-sm" onclick="editarCliente('${c.id}')" title="Editar">✏️</button>
+          <button class="btn btn-d btn-sm" onclick="eliminarCliente('${c.id}')" title="Eliminar">🗑️</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function _pareceIP(s){return/^\d{1,3}(\.\d{1,3}){3}$/.test(s);}
+function _pareceFecha(s){return/^\d{4}-\d{2}-\d{2}/.test(s)||/^\d{1,2}\/\d{1,2}\/\d{2,4}/.test(s);}
+function _pareceHora(s){return/^\d{1,2}:\d{2}(:\d{2})?$/.test(s);}
+function _pareceNumero(s){return/^\d+([.,]\d+)?$/.test(s);}
+
+function procesarSubresellers(items){
+  const existentes=new Set(DB.clientes.map(c=>(c.nombre||'').toLowerCase()));
+  let creados=0,omitidos=0;
+  items.forEach(it=>{
+    if(!it.username)return;
+    if(existentes.has(it.username.toLowerCase())){omitidos++;return;}
+    DB.clientes.push({
+      id:uid(),nombre:it.username,tel:'',user:'',pass:'',device:'android-tv',plan:'1',
+      tipo:'vendedor',categoria:'vendedor',precio:0,inicio:today(),
+      vencimiento:addMeses(today(),1),notas:'Importado de Subresellers OTT',debe:0,activo:true
+    });
+    existentes.add(it.username.toLowerCase());
+    creados++;
+  });
+  save();renderAll();
+  if(document.getElementById('pn-vendedores')?.classList.contains('on'))renderVendedoresCli();
+  cerrarModal('modal-sync-vend');
+  document.getElementById('sv-cli-pegado').value='';
+  alert(`✅ Importación completa:\n• ${creados} vendedores nuevos\n• ${omitidos} ya existían (omitidos)\n\nEdita cada uno (✏️) para poner precio y fecha de pago.`);
+}
+
+function importarSubresellersPegado(){
+  const txt=(document.getElementById('sv-cli-pegado').value||'').trim();
+  if(!txt)return alert('Pega al menos una línea, o usa "Seleccionar archivo"');
+  const lineas=txt.split('\n').map(l=>l.trim()).filter(Boolean);
+  const esManualExplicito=lineas.length>0&&lineas.every(l=>{
+    const p=l.split(',');
+    return p.length===2&&!_pareceNumero(p[0].trim())&&_pareceNumero(p[1].trim());
+  });
+  let items=[];
+  if(esManualExplicito){
+    items=lineas.map(l=>{
+      const p=l.split(',');
+      return{username:p[0].trim()};
+    }).filter(it=>it.username);
+  }else{
+    const tokens=txt.split(/[\s,\t\n]+/).map(t=>t.trim().replace(/[,:]+$/,'')).filter(Boolean);
+    const vistos=new Set();
+    tokens.forEach(tok=>{
+      if(_pareceNumero(tok)||_pareceIP(tok)||_pareceFecha(tok)||_pareceHora(tok))return;
+      if(vistos.has(tok.toLowerCase()))return;
+      vistos.add(tok.toLowerCase());
+      items.push({username:tok});
+    });
+  }
+  if(!items.length)return alert('No se detectaron nombres de usuario. Copia de nuevo las filas de la tabla Subresellers e inténtalo otra vez.');
+  procesarSubresellers(items);
+}
+
+function importarSubresellersArchivo(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const txt=e.target.result;
+    let items=[];
+    try{
+      const json=JSON.parse(txt);
+      const lineas=Array.isArray(json)?json:Object.values(json);
+      items=lineas.filter(l=>l&&typeof l==='object').map(l=>({
+        username:l.Username||l.username||l.user||l.USER||''
+      })).filter(it=>it.username);
+    }catch{
+      const lineas=txt.split('\n').map(l=>l.trim()).filter(Boolean);
+      items=lineas.map(l=>({username:l.split(',')[0].trim().replace(/"/g,'')})).filter(it=>it.username);
+    }
+    if(!items.length)return alert('No se encontraron datos válidos en el archivo');
+    procesarSubresellers(items);
+  };
+  reader.readAsText(file);
+  input.value='';
+}
+
+function limpiarVendedoresInvalidos(){
+  const invalidos=DB.clientes.filter(c=>c.tipo==='vendedor'&&(_pareceNumero(c.nombre)||_pareceIP(c.nombre)||_pareceFecha(c.nombre)||_pareceHora(c.nombre)));
+  if(!invalidos.length)return alert('No se encontraron vendedores con nombre inválido (números, IPs, fechas).');
+  if(!confirm(`Se encontraron ${invalidos.length} vendedores con nombre inválido (ej: "${invalidos[0].nombre}"). ¿Eliminarlos?`))return;
+  const idsInvalidos=new Set(invalidos.map(c=>c.id));
+  DB.clientes=DB.clientes.filter(c=>!idsInvalidos.has(c.id));
+  save();renderAll();renderVendedoresCli();
+  alert(`✅ ${invalidos.length} vendedores inválidos eliminados.`);
+}
+
 // ===== RENOVAR =====
+let _renComprobante=null;
 function abrirRenovar(id){
   const c=DB.clientes.find(x=>x.id===id);if(!c)return;
   document.getElementById('modal-ren-info').innerHTML=`<b>${escH(c.nombre)}</b> — Vence: <b style="color:var(--red)">${c.vencimiento}</b> | Precio anterior: <b>${fmt(c.precio)}</b>`;
   document.getElementById('ren-cli-id').value=id;
   document.getElementById('ren-plan').value='1';
   document.getElementById('ren-precio').value=c.precio||'';
+  document.getElementById('ren-referencia').value='';
+  document.getElementById('ren-comprobante-file').value='';
+  document.getElementById('ren-comprobante-info').textContent='';
+  _renComprobante=null;
   abrirModal('modal-renovar');
+}
+
+function cargarComprobante(input){
+  const file=input.files[0];if(!file)return;
+  if(file.size>3*1024*1024){
+    alert('El archivo es muy pesado (máx. 3MB). Intenta con una foto de menor calidad o comprime el PDF.');
+    input.value='';return;
+  }
+  const reader=new FileReader();
+  reader.onload=e=>{
+    _renComprobante={nombre:file.name,data:e.target.result};
+    document.getElementById('ren-comprobante-info').textContent='✅ '+file.name+' cargado';
+  };
+  reader.readAsDataURL(file);
 }
 
 function guardarRenovacion(){
   const id=document.getElementById('ren-cli-id').value;
   const plan=document.getElementById('ren-plan').value;
   const precio=parseFloat(document.getElementById('ren-precio').value)||0;
+  const metodo=document.getElementById('ren-metodo').value;
+  const referencia=(document.getElementById('ren-referencia').value||'').trim();
   const c=DB.clientes.find(x=>x.id===id);if(!c)return;
   const fechaAnterior=c.vencimiento;
   const baseDate=diasHasta(c.vencimiento)<0?today():c.vencimiento;
   c.vencimiento=addMeses(baseDate,plan);
   c.plan=plan;c.precio=precio;
   if(!c.historial)c.historial=[];
-  c.historial.push({fecha:today(),fecha_anterior:fechaAnterior,meses:parseInt(plan),precio:precio,nueva_fecha:c.vencimiento});
+  c.historial.push({
+    fecha:today(),fecha_anterior:fechaAnterior,meses:parseInt(plan),precio:precio,
+    metodo:metodo,referencia:referencia,
+    comprobanteNombre:_renComprobante?.nombre||'',comprobanteData:_renComprobante?.data||'',
+    nueva_fecha:c.vencimiento
+  });
   save();cerrarModal('modal-renovar');renderAll();
   alert('✅ Suscripción renovada hasta: '+c.vencimiento);
 }
@@ -1204,7 +1556,7 @@ function copiarMensaje(id){
 
 // ===== RENDERS =====
 function renderAll(){
-  renderDash();renderClientes();renderVencimientos();llenarSelectClientes();
+  renderDash();renderClientes();renderVendedoresCli();renderVencimientos();llenarSelectClientes();
   const el=document.getElementById('pill-total');
   if(el)el.textContent=DB.clientes.length+' clientes';
 }
@@ -1246,6 +1598,7 @@ function renderClientes(){
   const disp=document.getElementById('cli-disp')?.value||'';
   const tipoFil=document.getElementById('cli-tipo-fil')?.value||'';
   let lista=DB.clientes.filter(c=>{
+    if((c.tipo||'mensual')==='vendedor')return false;
     if(q&&!c.nombre?.toLowerCase().includes(q)&&!c.user?.toLowerCase().includes(q)&&!c.tel?.includes(q))return false;
     if(est&&estadoCliente(c)!==est)return false;
     if(disp&&c.device!==disp)return false;
@@ -1264,7 +1617,9 @@ function renderClientes(){
       <td style="font-family:monospace">${escH(c.tel||'—')}</td>
       <td style="font-family:monospace;font-size:11px">${escH(c.user)}</td>
       <td>${DISP_LABEL[c.device]||c.device}</td>
-      <td>${TIPO_BADGE[tipo]||tipo}</td>
+      <td><select onchange="cambiarTipoCliente('${c.id}',this.value)" style="background:${TIPO_COLOR[tipo]||'#1565c0'};color:#fff;border:none;border-radius:5px;padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer">
+        ${Object.entries(TIPO_LABEL_SEL).map(([k,v])=>`<option value="${k}" ${tipo===k?'selected':''}>${v}</option>`).join('')}
+      </select></td>
       <td><span style="font-family:monospace">${c.vencimiento}</span><div style="font-size:10px;color:${dias<0?'var(--red)':dias<=7?'var(--orange)':'var(--muted)'}">${dias<0?Math.abs(dias)+' días vencido':dias+' días'}</div></td>
       <td>${BADGE[est]||''}</td>
       <td style="font-family:monospace">${fmt(c.precio)}</td>
