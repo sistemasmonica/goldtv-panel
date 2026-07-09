@@ -195,7 +195,7 @@ select option{background:#1a1735}
   <div class="sc-grid" style="grid-template-columns:1fr 1fr 1fr">
     <div class="sc"><div class="sc-lbl">Vencidos</div><div class="sc-val" style="color:var(--red)" id="d-vencidos">0</div><div class="sc-sub">requieren renovación</div></div>
     <div class="sc"><div class="sc-lbl">Cobros del mes</div><div class="sc-val" style="color:var(--green)" id="d-mes">$0.00</div><div class="sc-sub" id="d-mes-sub">0 clientes vencen este mes</div></div>
-    <div class="sc" style="cursor:pointer" onclick="abrirEnvioMasivo()"><div class="sc-lbl">💸 Con deuda</div><div class="sc-val" style="color:#f97316" id="d-deudores">0</div><div class="sc-sub" id="d-deudores-total">pendiente: $0.00</div></div>
+    <div class="sc" style="cursor:pointer" onclick="irADeudores()"><div class="sc-lbl">💸 Con deuda</div><div class="sc-val" style="color:#f97316" id="d-deudores">0</div><div class="sc-sub" id="d-deudores-total">pendiente: $0.00</div></div>
   </div>
   <div class="card">
     <div class="card-inner">
@@ -1432,10 +1432,11 @@ function _pareceNumero(s){return/^\d+([.,]\d+)?$/.test(s);}
 
 function procesarSubresellers(items){
   const existentes=new Set(DB.clientes.map(c=>(c.nombre||'').toLowerCase()));
-  let creados=0,omitidos=0;
+  let creados=0,omitidos=0,bloqueadosDemo=0;
   items.forEach(it=>{
     if(!it.username)return;
     if(existentes.has(it.username.toLowerCase())){omitidos++;return;}
+    if(IS_DEMO&&DB.clientes.length>=3){bloqueadosDemo++;return;}
     DB.clientes.push({
       id:uid(),nombre:it.username,tel:'',user:'',pass:'',device:'android-tv',plan:'1',
       tipo:'vendedor',categoria:'vendedor',precio:0,inicio:today(),
@@ -1448,7 +1449,7 @@ function procesarSubresellers(items){
   if(document.getElementById('pn-vendedores')?.classList.contains('on'))renderVendedoresCli();
   cerrarModal('modal-sync-vend');
   document.getElementById('sv-cli-pegado').value='';
-  alert(`✅ Importación completa:\n• ${creados} vendedores nuevos\n• ${omitidos} ya existían (omitidos)\n\nEdita cada uno (✏️) para poner precio y fecha de pago.`);
+  alert(`✅ Importación completa:\n• ${creados} vendedores nuevos\n• ${omitidos} ya existían (omitidos)`+(bloqueadosDemo?`\n• ${bloqueadosDemo} no se crearon (límite de MODO DEMO: 3 clientes)`:'')+`\n\nEdita cada uno (✏️) para poner precio y fecha de pago.`);
 }
 
 function importarSubresellersPegado(){
@@ -1692,6 +1693,22 @@ function renderAll(){
   renderDash();renderClientes();renderVendedoresCli();renderVencimientos();llenarSelectClientes();
   const el=document.getElementById('pill-total');
   if(el)el.textContent=DB.clientes.length+' clientes';
+}
+
+function irADeudores(){
+  const deudoresClientes=DB.clientes.filter(c=>c.debe>0&&(c.tipo||'mensual')!=='vendedor');
+  const deudoresVendedores=DB.clientes.filter(c=>c.debe>0&&(c.tipo||'')==='vendedor');
+  if(!deudoresClientes.length&&!deudoresVendedores.length)return alert('No hay nadie con deuda pendiente.');
+  if(deudoresClientes.length){
+    tab('clientes',document.querySelectorAll('.nav>.nt')[1]);
+    document.getElementById('cli-tipo-fil').value='';
+    document.getElementById('cli-estado').value='';
+    renderClientes();
+    if(deudoresVendedores.length)alert(`También hay ${deudoresVendedores.length} vendedor(es)/socio(s) con deuda — revísalos en la pestaña 🏪 Vendedores.`);
+  }else{
+    tab('vendedores',document.querySelectorAll('.nav>.nt')[7]);
+    renderVendedoresCli();
+  }
 }
 
 function renderDash(){
