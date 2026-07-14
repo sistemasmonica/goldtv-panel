@@ -4,6 +4,39 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Guía de Administración de Clientes GOLDTV</title>
+<link rel="manifest" id="manifest-link" href="manifest.json">
+<meta name="theme-color" content="#0d0b1f">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GOLD TV">
+<script>
+(function(){
+  try{
+    var iconUrl=function(n){return new URL(n,location.href).href;};
+    var manifest={
+      name:"GOLD TV - Panel de Vendedores",
+      short_name:"GOLD TV",
+      start_url:location.href,
+      scope:new URL('.',location.href).href,
+      display:"standalone",
+      background_color:"#0d0b1f",
+      theme_color:"#0d0b1f",
+      icons:[
+        {src:iconUrl('icon-192.png'),sizes:"192x192",type:"image/png",purpose:"any maskable"},
+        {src:iconUrl('icon-512.png'),sizes:"512x512",type:"image/png",purpose:"any maskable"}
+      ]
+    };
+    var blob=new Blob([JSON.stringify(manifest)],{type:"application/json"});
+    document.getElementById('manifest-link').setAttribute('href',URL.createObjectURL(blob));
+  }catch(e){}
+  if('serviceWorker' in navigator){
+    window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});
+  }
+})();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -727,6 +760,18 @@ select option{background:#1a1735}
   </div>
   <div class="card" style="margin-bottom:14px">
     <div class="card-inner">
+      <div class="card-t">🔎 Elegir un rango de fechas</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:12px">
+        <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Desde</div><input type="date" id="ig-rango-desde" onchange="renderIngresos()" style="padding:7px 10px;font-size:12px"></div>
+        <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Hasta</div><input type="date" id="ig-rango-hasta" onchange="renderIngresos()" style="padding:7px 10px;font-size:12px"></div>
+        <button class="btn btn-sm btn-s" onclick="document.getElementById('ig-rango-desde').value='';document.getElementById('ig-rango-hasta').value='';renderIngresos()">✕ Limpiar</button>
+      </div>
+      <div style="font-size:13px;color:var(--muted)">Total generado: <b id="ig-rango-total" style="color:var(--green);font-size:20px">$0.00</b> <span id="ig-rango-sub"></span></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-inner">
       <div class="card-t">📅 Ingresos por semana</div>
       <div class="tbl-wrap">
         <table><thead><tr><th>Semana</th><th>Renovaciones</th><th>Total cobrado</th></tr></thead>
@@ -1290,6 +1335,14 @@ function renderIngresos(){
     });
   });
   const s=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+
+  const rDesde=document.getElementById('ig-rango-desde')?.value||'';
+  const rHasta=document.getElementById('ig-rango-hasta')?.value||'';
+  let rango=todas;
+  if(rDesde)rango=rango.filter(h=>h.fecha>=rDesde);
+  if(rHasta)rango=rango.filter(h=>h.fecha<=rHasta);
+  s('ig-rango-total',fmt(rango.reduce((t,h)=>t+h.precio,0)));
+  s('ig-rango-sub',(rDesde||rHasta)?`(${rango.length} renovaciones en el rango elegido)`:`(todo el historial — ${rango.length} renovaciones. Elige fechas arriba para filtrar)`);
 
   const inicioSemana=f=>{
     const d=new Date(f+'T00:00:00');
