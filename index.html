@@ -179,6 +179,7 @@ select option{background:#1a1735}
   <button class="nt" onclick="tab('vencimientos',this)">⏰ Vencimientos</button>
   <button class="nt" onclick="tab('guias',this)">📖 Guías instalación</button>
   <button class="nt" onclick="tab('renovaciones',this)">📋 Renovaciones</button>
+  <button class="nt" onclick="tab('ingresos',this)">💰 Ingresos</button>
   <button class="nt" onclick="tab('ayuda',this)">❓ Ayuda</button>
   <button class="nt" onclick="tab('vendedores',this)">🏪 Vendedores</button>
   <button class="nt" id="nt-subvendedores" style="display:none" onclick="tab('subvendedores',this)">👥 Mis Vendedores</button>
@@ -716,6 +717,33 @@ select option{background:#1a1735}
   </div>
 </div>
 
+<!-- ===== INGRESOS ===== -->
+<div id="pn-ingresos" class="pn">
+  <div class="sc-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px">
+    <div class="sc"><div class="sc-lbl">Esta semana</div><div class="sc-val" style="color:var(--green)" id="ig-semana-total">$0.00</div><div class="sc-sub" id="ig-semana-sub">0 renovaciones</div></div>
+    <div class="sc"><div class="sc-lbl">Este mes</div><div class="sc-val" style="color:var(--gold)" id="ig-mes-total">$0.00</div><div class="sc-sub" id="ig-mes-sub">0 renovaciones</div></div>
+    <div class="sc"><div class="sc-lbl">Promedio semanal</div><div class="sc-val" style="color:#a78bfa" id="ig-prom-semanal">$0.00</div><div class="sc-sub" id="ig-prom-sub">0 semanas con datos</div></div>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-inner">
+      <div class="card-t">📅 Ingresos por semana</div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>Semana</th><th>Renovaciones</th><th>Total cobrado</th></tr></thead>
+        <tbody id="tb-ingresos-semana"></tbody></table>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-inner">
+      <div class="card-t">🗓️ Ingresos por mes</div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>Mes</th><th>Renovaciones</th><th>Total cobrado</th></tr></thead>
+        <tbody id="tb-ingresos-mes"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL HISTORIAL CLIENTE -->
 <div class="modal-overlay" id="modal-hist">
   <div class="modal">
@@ -1154,6 +1182,7 @@ function tab(id,el){
   if(id==='vencimientos')renderVencimientos();
   if(id==='guias')llenarSelectClientes();
   if(id==='renovaciones')renderRenovaciones();
+  if(id==='ingresos')renderIngresos();
   if(id==='subvendedores')cargarSubvendedores();
   if(id==='vendedores')renderVendedoresCli();
 }
@@ -1232,6 +1261,72 @@ function renderRenovaciones(){
     <td><span class="bdg" style="background:var(--surface2)">${h.metodo||'—'}</span></td>
     <td style="font-family:monospace">${h.nueva_fecha||'—'}</td>
   </tr>`).join('');
+}
+
+function renderIngresos(){
+  const todas=[];
+  DB.clientes.forEach(c=>{
+    (c.historial||[]).forEach(h=>{
+      if(h.fecha)todas.push({fecha:h.fecha,precio:h.precio||0});
+    });
+  });
+  const s=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+
+  const inicioSemana=f=>{
+    const d=new Date(f+'T00:00:00');
+    const dia=d.getDay();
+    d.setDate(d.getDate()+(dia===0?-6:1-dia));
+    return d.toISOString().substr(0,10);
+  };
+  const semanas={};
+  todas.forEach(h=>{
+    const ini=inicioSemana(h.fecha);
+    (semanas[ini]=semanas[ini]||{total:0,n:0}).total+=h.precio;
+    semanas[ini].n++;
+  });
+  const semanasKeys=Object.keys(semanas).sort().reverse();
+  const fmtRangoSemana=ini=>{
+    const d1=new Date(ini+'T00:00:00');
+    const d2=new Date(d1);d2.setDate(d1.getDate()+6);
+    const f=d=>d.toLocaleDateString('es',{day:'2-digit',month:'short'});
+    return `${f(d1)} – ${f(d2)}`;
+  };
+  const tbSem=document.getElementById('tb-ingresos-semana');
+  if(tbSem){
+    tbSem.innerHTML=semanasKeys.length?semanasKeys.map(k=>`<tr>
+      <td>Semana del ${fmtRangoSemana(k)}</td>
+      <td style="text-align:center">${semanas[k].n}</td>
+      <td style="font-family:monospace;color:var(--green)">${fmt(semanas[k].total)}</td>
+    </tr>`).join(''):'<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:20px">Sin renovaciones registradas</td></tr>';
+  }
+  const semanaActual=inicioSemana(today());
+  s('ig-semana-total',fmt(semanas[semanaActual]?.total||0));
+  s('ig-semana-sub',(semanas[semanaActual]?.n||0)+' renovaciones');
+  const totalGeneral=semanasKeys.reduce((t,k)=>t+semanas[k].total,0);
+  s('ig-prom-semanal',fmt(semanasKeys.length?totalGeneral/semanasKeys.length:0));
+  s('ig-prom-sub',semanasKeys.length+' semanas con datos');
+
+  const meses={};
+  todas.forEach(h=>{
+    const m=h.fecha.substr(0,7);
+    (meses[m]=meses[m]||{total:0,n:0}).total+=h.precio;
+    meses[m].n++;
+  });
+  const mesesKeys=Object.keys(meses).sort().reverse();
+  const tbMes=document.getElementById('tb-ingresos-mes');
+  if(tbMes){
+    tbMes.innerHTML=mesesKeys.length?mesesKeys.map(m=>{
+      const nombre=new Date(m+'-01T00:00:00').toLocaleString('es',{month:'long',year:'numeric'});
+      return `<tr>
+        <td style="text-transform:capitalize">${nombre}</td>
+        <td style="text-align:center">${meses[m].n}</td>
+        <td style="font-family:monospace;color:var(--gold)">${fmt(meses[m].total)}</td>
+      </tr>`;
+    }).join(''):'<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:20px">Sin renovaciones registradas</td></tr>';
+  }
+  const mesActual=today().substr(0,7);
+  s('ig-mes-total',fmt(meses[mesActual]?.total||0));
+  s('ig-mes-sub',(meses[mesActual]?.n||0)+' renovaciones');
 }
 
 // ===== FORMULARIO =====
