@@ -585,7 +585,7 @@ select option{background:#1a1735}
   <div class="ay-paso"><div class="ay-n">4</div><div>Haz clic en <b>📂 Seleccionar archivo JSON</b> y elige el archivo que acabas de descargar</div></div>
   <div class="ay-paso"><div class="ay-n">5</div><div>Escribe el <b>💲 Precio</b> que le quieres poner a los clientes nuevos que se vayan a importar</div></div>
   <div class="ay-paso"><div class="ay-n">6</div><div>No hace falta revisar la lista ni marcar nada — solo haz clic en <b>⬇️ Importar todos</b></div></div>
-  <div class="ay-tip">✅ Al que ya tenías registrado, solo se le actualiza la fecha de vencimiento (no se duplica ni cambia de precio). Al que no tenías, se agrega como nuevo con el precio que pusiste — así también aparece en <b>💰 Ingresos</b>. Puedes repetir esto todos los días sin miedo, nunca duplica.</div>
+  <div class="ay-tip">✅ Al que ya tenías registrado: si su fecha de vencimiento avanzó (o sea que lo renovaste en el OTT), esa renovación queda registrada automáticamente en <b>💰 Ingresos</b> usando el precio que ya tenía guardado ese cliente. Si su fecha no cambió, solo se actualiza sin contar como cobro nuevo. Al que no tenías, se agrega como nuevo con el precio que pusiste arriba. Puedes repetir esto todos los días sin miedo, nunca duplica.</div>
   <div class="ay-warn">⚠️ Esta sincronización solo trae los datos técnicos (usuario/clave/fecha). No hay conexión automática permanente — cada vez que actives clientes nuevos en el OTT, repite estos pasos para traerlos aquí.</div>
 </div>
 
@@ -2104,7 +2104,18 @@ function importarSeleccionados(){
       historial:precioNuevo>0?[{fecha:today(),fecha_anterior:'',meses:1,precio:precioNuevo,metodo:'',referencia:'Importado del panel OTT',nueva_fecha:vence}]:[]
     };
     const idx=DB.clientes.findIndex(c=>c.user===obj.user);
-    if(idx!==-1){DB.clientes[idx]={...DB.clientes[idx],pass:obj.pass,vencimiento:obj.vencimiento,activo:obj.activo};actualizados++;}
+    if(idx!==-1){
+      const cli=DB.clientes[idx];
+      const vencAnterior=cli.vencimiento;
+      const seRenovo=obj.vencimiento&&vencAnterior&&obj.vencimiento>vencAnterior;
+      DB.clientes[idx]={...cli,pass:obj.pass,vencimiento:obj.vencimiento,activo:obj.activo};
+      if(seRenovo&&cli.precio>0){
+        if(!DB.clientes[idx].historial)DB.clientes[idx].historial=[];
+        const meses=Math.max(1,Math.round((new Date(obj.vencimiento)-new Date(vencAnterior))/(1000*60*60*24*30)));
+        DB.clientes[idx].historial.push({fecha:today(),fecha_anterior:vencAnterior,meses,precio:cli.precio,metodo:'',referencia:'Renovación detectada al sincronizar OTT',nueva_fecha:obj.vencimiento});
+      }
+      actualizados++;
+    }
     else{DB.clientes.push(obj);nuevos++;}
   });
 
