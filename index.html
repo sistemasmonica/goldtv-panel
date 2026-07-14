@@ -1073,7 +1073,7 @@ function setSyncStatus(s){
 async function saveToCloud(){
   try{
     setSyncStatus('sync');
-    await sb.from('gtv_reseller_clientes').upsert({vendor_id:VENDOR_ID,data:DB.clientes,updated_at:new Date().toISOString()});
+    await sb.rpc('vendedor_guardar_clientes',{p_vendor_id:VENDOR_ID,p_license_key:LICENSE_KEY,p_data:DB.clientes});
     setSyncStatus('ok');
   }catch(e){setSyncStatus('err');}
 }
@@ -1081,8 +1081,8 @@ async function saveToCloud(){
 async function syncFromCloud(){
   try{
     setSyncStatus('load');
-    const{data,error}=await sb.from('gtv_reseller_clientes').select('data').eq('vendor_id',VENDOR_ID).maybeSingle();
-    if(!error&&data?.data?.length>0)DB.clientes=data.data;
+    const{data,error}=await sb.rpc('vendedor_obtener_clientes',{p_vendor_id:VENDOR_ID,p_license_key:LICENSE_KEY});
+    if(!error&&data?.length>0)DB.clientes=data;
     setSyncStatus('ok');
   }catch(e){setSyncStatus('err');}
   repararHistorialInicial();
