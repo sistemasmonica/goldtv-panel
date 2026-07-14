@@ -1086,6 +1086,7 @@ async function syncFromCloud(){
     setSyncStatus('ok');
   }catch(e){setSyncStatus('err');}
   repararHistorialInicial();
+  repararFechasImportadas();
   renderAll();
 }
 
@@ -1094,6 +1095,21 @@ function repararHistorialInicial(){
   DB.clientes.forEach(c=>{
     if((!c.historial||!c.historial.length)&&c.precio>0&&c.inicio){
       c.historial=[{fecha:c.inicio,fecha_anterior:'',meses:parseInt(c.plan)||1,precio:c.precio,metodo:'',referencia:'Contratación inicial',nueva_fecha:c.vencimiento||''}];
+      cambios++;
+    }
+  });
+  if(cambios>0)save();
+  return cambios;
+}
+
+function repararFechasImportadas(){
+  let cambios=0;
+  DB.clientes.forEach(c=>{
+    if(c.historial&&c.historial.length===1&&c.historial[0].referencia==='Importado del panel OTT'&&c.vencimiento){
+      const fechaCorrecta=addMeses(c.vencimiento,-1);
+      c.historial[0].fecha=fechaCorrecta;
+      c.historial[0].referencia='Importado del panel OTT (fecha estimada: vencimiento - 1 mes)';
+      c.inicio=fechaCorrecta;
       cambios++;
     }
   });
@@ -2086,6 +2102,7 @@ function importarSeleccionados(){
   selIdx.forEach(i=>{
     const l=syncData[i];if(!l)return;
     const vence=l.vence||addMeses(today(),1);
+    const fechaEstimada=vence?addMeses(vence,-1):today();
     const obj={
       id:uid(),
       nombre:l.user,
@@ -2096,12 +2113,12 @@ function importarSeleccionados(){
       plan:'1',
       tipo:l.tipo,
       precio:precioNuevo,
-      inicio:today(),
+      inicio:fechaEstimada,
       vencimiento:vence,
       notas:l.notes||'',
       debe:0,
       activo:l.activo,
-      historial:precioNuevo>0?[{fecha:today(),fecha_anterior:'',meses:1,precio:precioNuevo,metodo:'',referencia:'Importado del panel OTT',nueva_fecha:vence}]:[]
+      historial:precioNuevo>0?[{fecha:fechaEstimada,fecha_anterior:'',meses:1,precio:precioNuevo,metodo:'',referencia:'Importado del panel OTT (fecha estimada: vencimiento - 1 mes)',nueva_fecha:vence}]:[]
     };
     const idx=DB.clientes.findIndex(c=>c.user===obj.user);
     if(idx!==-1){
@@ -2112,7 +2129,7 @@ function importarSeleccionados(){
       if(seRenovo&&cli.precio>0){
         if(!DB.clientes[idx].historial)DB.clientes[idx].historial=[];
         const meses=Math.max(1,Math.round((new Date(obj.vencimiento)-new Date(vencAnterior))/(1000*60*60*24*30)));
-        DB.clientes[idx].historial.push({fecha:today(),fecha_anterior:vencAnterior,meses,precio:cli.precio,metodo:'',referencia:'Renovación detectada al sincronizar OTT',nueva_fecha:obj.vencimiento});
+        DB.clientes[idx].historial.push({fecha:vencAnterior,fecha_anterior:vencAnterior,meses,precio:cli.precio,metodo:'',referencia:'Renovación detectada al sincronizar OTT',nueva_fecha:obj.vencimiento});
       }
       actualizados++;
     }
