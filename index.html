@@ -851,6 +851,11 @@ select option{background:#1a1735}
       En tu Panel OTT ve a <b style="color:var(--gold)">Users → Administrar Usuarios → Backup Users → JSON</b> para descargar el archivo. Luego haz clic en <b style="color:var(--gold)">"📂 Seleccionar archivo JSON"</b> y elígelo aquí.
     </div>
     <div id="sync-lista" style="display:none">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;background:var(--surface2);border:1px solid rgba(16,185,129,.4);border-radius:8px;padding:10px 12px;flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--green)">💲 Precio a asignar a los clientes <b>NUEVOS</b> que se importen:</span>
+        <input type="number" id="sync-precio" step="0.01" min="0" value="5" style="width:90px;padding:5px 8px;font-size:12px">
+        <span style="font-size:11px;color:var(--muted)">(así también cuentan en 💰 Ingresos — los que ya existen no cambian de precio)</span>
+      </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
         <span id="sync-count" style="font-size:12px;color:var(--gold);font-weight:700"></span>
         <div style="display:flex;gap:6px">
@@ -2021,6 +2026,7 @@ function importarSeleccionados(){
   if(!selIdx.length)return alert('Selecciona al menos un cliente');
 
   let nuevos=0,actualizados=0;
+  const precioNuevo=parseFloat(document.getElementById('sync-precio')?.value)||0;
 
   selIdx.forEach(i=>{
     const l=syncData[i];if(!l)return;
@@ -2034,12 +2040,13 @@ function importarSeleccionados(){
       device:'android-tv',
       plan:'1',
       tipo:l.tipo,
-      precio:0,
+      precio:precioNuevo,
       inicio:today(),
       vencimiento:vence,
       notas:l.notes||'',
       debe:0,
-      activo:l.activo
+      activo:l.activo,
+      historial:precioNuevo>0?[{fecha:today(),fecha_anterior:'',meses:1,precio:precioNuevo,metodo:'',referencia:'Importado del panel OTT',nueva_fecha:vence}]:[]
     };
     const idx=DB.clientes.findIndex(c=>c.user===obj.user);
     if(idx!==-1){DB.clientes[idx]={...DB.clientes[idx],pass:obj.pass,vencimiento:obj.vencimiento,activo:obj.activo};actualizados++;}
