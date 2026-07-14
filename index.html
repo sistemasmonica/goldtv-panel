@@ -764,6 +764,7 @@ select option{background:#1a1735}
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:12px">
         <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Desde</div><input type="date" id="ig-rango-desde" onchange="renderIngresos()" style="padding:7px 10px;font-size:12px"></div>
         <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Hasta</div><input type="date" id="ig-rango-hasta" onchange="renderIngresos()" style="padding:7px 10px;font-size:12px"></div>
+        <button class="btn btn-sm" style="background:rgba(74,108,247,.25);border:1px solid rgba(74,108,247,.6);color:#7c8fff" onclick="renderIngresos()">🔍 Buscar</button>
         <button class="btn btn-sm btn-s" onclick="document.getElementById('ig-rango-desde').value='';document.getElementById('ig-rango-hasta').value='';renderIngresos()">✕ Limpiar</button>
       </div>
       <div style="font-size:13px;color:var(--muted)">Total generado: <b id="ig-rango-total" style="color:var(--green);font-size:20px">$0.00</b> <span id="ig-rango-sub"></span></div>
