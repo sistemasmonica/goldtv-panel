@@ -1027,7 +1027,7 @@ function eliminarVencidos(){
 async function checkLicense(){
   if(!VENDOR_ID||!LICENSE_KEY){showLock();return false;}
   try{
-    const{data,error}=await sb.from('gtv_licencias').select('active,vendor_name,parent_vendor_id,demo,vence').eq('vendor_id',VENDOR_ID).eq('license_key',LICENSE_KEY).maybeSingle();
+    const{data,error}=await sb.rpc('verificar_licencia',{p_vendor_id:VENDOR_ID,p_license_key:LICENSE_KEY}).maybeSingle();
     if(error||!data||!data.active){showLock();return false;}
     if(data.vence&&data.vence<today()){
       showLock(data.demo
@@ -1168,7 +1168,7 @@ function importarSubvendedoresArchivo(input){
 }
 
 async function procesarSubvendedores(nombres){
-  const{data:existentes}=await sb.from('gtv_licencias').select('vendor_name');
+  const{data:existentes}=await sb.rpc('nombres_vendedores_existentes');
   const nombresExistentes=new Set((existentes||[]).map(v=>(v.vendor_name||'').toLowerCase()));
 
   const btn=document.getElementById('btn-crear-sv');
@@ -1183,8 +1183,8 @@ async function procesarSubvendedores(nombres){
     const sufijo=nombre.toUpperCase().replace(/\s+/g,'').substring(0,8);
     const licenseKey='GOLD-'+sufijo+'-2026';
     const vence=addDias(today(),365);
-    const{error}=await sb.from('gtv_licencias').insert({vendor_id:vendorId,license_key:licenseKey,vendor_name:nombre,active:true,demo:false,parent_vendor_id:VENDOR_ID,vence});
-    if(error){errores++;continue;}
+    const{data:ok,error}=await sb.rpc('vendedor_crear_subvendedor',{p_vendor_id:VENDOR_ID,p_license_key:LICENSE_KEY,p_new_vendor_id:vendorId,p_new_license_key:licenseKey,p_new_vendor_name:nombre,p_vence:vence});
+    if(error||!ok){errores++;continue;}
     creados++;
     links.push(nombre+': https://sistemasmonica.github.io/goldtv-panel/?v='+vendorId+'&k='+licenseKey);
   }
@@ -1200,7 +1200,7 @@ async function procesarSubvendedores(nombres){
 
 async function cargarSubvendedores(){
   const tbody=document.getElementById('tb-subvendedores');
-  const{data,error}=await sb.from('gtv_licencias').select('*').eq('parent_vendor_id',VENDOR_ID).order('vendor_name');
+  const{data,error}=await sb.rpc('vendedor_listar_subvendedores',{p_vendor_id:VENDOR_ID,p_license_key:LICENSE_KEY});
   if(error){tbody.innerHTML='<tr><td colspan="4" class="empty">Error al cargar</td></tr>';return;}
   if(!data||!data.length){tbody.innerHTML='<tr><td colspan="4" class="empty">Aún no has creado sub-vendedores.</td></tr>';return;}
   const hoy=today();
