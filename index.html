@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+SO<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -1168,7 +1168,7 @@ function importarSubvendedoresArchivo(input){
 }
 
 async function procesarSubvendedores(nombres){
-  const{data:existentes}=await sb.rpc('nombres_vendedores_existentes');
+  const{data:existentes}=await sb.rpc('nombres_vendedores_existentes',{p_vendor_id:VENDOR_ID,p_license_key:LICENSE_KEY});
   const nombresExistentes=new Set((existentes||[]).map(v=>(v.vendor_name||'').toLowerCase()));
 
   const btn=document.getElementById('btn-crear-sv');
